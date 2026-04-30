@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>จัดการผู้ใช้งาน — Iron Drop</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="/nav-unified.css" rel="stylesheet">
+  <style>
+    body {
+      background: #eef2f7;
+      font-family: 'Prompt', sans-serif;
+    }
+
+    .page-header {
+      background: linear-gradient(135deg, #1a3a5c, #2563a8);
+      color: #fff;
+      padding: 1.25rem 1.5rem;
+      border-radius: 10px 10px 0 0;
+    }
+
+    .section-label {
+      font-weight: 700;
+      color: #1a3a5c;
+      border-left: 4px solid #2563a8;
+      padding-left: .6rem;
+      margin-bottom: 1rem;
+    }
+
+    .role-badge {
+      display: inline-block;
+      padding: .2rem .55rem;
+      border-radius: 20px;
+      font-size: .78rem;
+      font-weight: 600;
+    }
+
+    .role-submitter {
+      background: #e7f3ff;
+      color: #084298;
+      border: 1px solid #b6d4fe;
+    }
+
+    .role-approver {
+      background: #d1e7dd;
+      color: #0a3622;
+      border: 1px solid #a3cfbb;
+    }
+
+    .role-superadmin {
+      background: #f3e8ff;
+      color: #5a1a8a;
+      border: 1px solid #d0a8f5;
+    }
+
+    .role-managerial {
+      background: #fff3cd;
+      color: #664d03;
+      border: 1px solid #ffc107;
+    }
+
+    .status-active {
+      color: #198754;
+      font-weight: 600;
+    }
+
+    .status-inactive {
+      color: #dc3545;
+      font-weight: 600;
+    }
+
+    .table-hover tbody tr:hover {
+      background: #f0f4fa;
+    }
+
+    .action-btn {
+      width: 32px;
+      height: 32px;
+      padding: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    @media (max-width: 575px) {
+      body {
+        background: #fff;
+      }
+
+      .container-lg {
+        padding-left: .5rem;
+        padding-right: .5rem;
+      }
+
+      .py-4 {
+        padding-top: .75rem !important;
+        padding-bottom: .75rem !important;
+      }
+
+      .card.shadow-sm {
+        box-shadow: none !important;
+      }
+
+      .card {
+        border-radius: 0 !important;
+        border-left: none !important;
+        border-right: none !important;
+      }
+
+      .page-header {
+        border-radius: 0;
+        padding: .85rem 1rem;
+      }
+
+      .page-header h5 {
+        font-size: .95rem;
+      }
+
+      .card-body {
+        padding: .75rem;
+      }
+
+      .hdr-actions .btn-label {
+        display: none;
+      }
+
+      .hdr-actions .btn {
+        padding: .3rem .55rem;
+      }
+
+      #userInfo {
+        max-width: 80px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        display: inline-block;
+        vertical-align: middle;
+      }
+
+      /* Toolbar: stack search full-width */
+      .toolbar-row {
+        flex-direction: column !important;
+        align-items: stretch !important;
+      }
+
+      .toolbar-row .search-wrap {
+        flex-direction: column !important;
+      }
+
+      .toolbar-row .search-wrap input {
+        min-width: 0 !important;
+        width: 100% !important;
+      }
+
+      .toolbar-row .search-wrap select {
+        width: 100% !important;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Auth guard -->
+  <script>
+    (async () => {
+      try {
+        const r = await fetch('/api/auth/me');
+        if (!r.ok) { window.location.replace('/login.html'); return; }
+        const u = await r.json();
+        if (u.role !== 'superadmin') { window.location.replace('/login.html'); return; }
+        document.getElementById('userInfo').textContent = `${u.fullName} (${u.employeeId})`;
+        loadUsers();
+      } catch { window.location.replace('/login.html'); }
+    })();
+    async function logout() {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      window.location.replace('/login.html');
+    }
+  </script>
+
+  <div class="container-lg py-4">
+
+    <!-- Header -->
+    <div class="card shadow-sm mb-4">
+      <div class="page-header app-topbar">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 app-topbar-inner py-1">
+          <div>
+            <h5 class="mb-0"><i class="fas fa-users-cog me-2"></i>จัดการผู้ใช้งาน</h5>
+            <small class="opacity-75">SuperAdmin — เพิ่ม / แก้ไข / ลบบัญชีผู้ใช้</small>
+          </div>
+          <div class="d-flex align-items-center gap-2 hdr-actions app-nav-actions">
+            <span class="app-page-chip"><i class="fas fa-users-cog"></i>หน้าจัดการผู้ใช้</span>
+            <a href="/requests.html" class="btn btn-outline-light btn-sm app-nav-btn" title="จัดการคำขอ">
+              <i class="fas fa-clipboard-list"></i><span class="btn-label ms-1">คำขอ</span>
+            </a>
+            <a href="/dashboard.html" class="btn btn-outline-light btn-sm app-nav-btn" title="Dashboard">
+              <i class="fas fa-chart-line"></i><span class="btn-label ms-1">แดชบอร์ด</span>
+            </a>
+            <span class="app-user-chip" id="userInfo"><i class="fas fa-user-shield"></i>กำลังโหลด...</span>
+            <button class="btn btn-outline-light btn-sm app-nav-btn" onclick="logout()" title="ออกจากระบบ">
+              <i class="fas fa-sign-out-alt"></i><span class="btn-label ms-1">ออกจากระบบ</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Toolbar -->
+      <div class="card-body border-bottom">
+        <div class="d-flex flex-wrap gap-2 align-items-center justify-content-between toolbar-row">
+          <div class="d-flex gap-2 flex-wrap search-wrap">
+            <input type="text" class="form-control form-control-sm" id="searchInput"
+              placeholder="ค้นหา รหัส / ชื่อ / สาขา..." style="min-width:220px" oninput="filterTable()">
+            <select class="form-select form-select-sm" id="filterRole" onchange="filterTable()" style="width:auto">
+              <option value="">ทุก Role</option>
+              <option value="submitter">Submitter</option>
+              <option value="approver">Approver</option>
+              <option value="superadmin">SuperAdmin</option>
+              <option value="managerial">Managerial</option>
+            </select>
+            <select class="form-select form-select-sm" id="filterStatus" onchange="filterTable()" style="width:auto">
+              <option value="">ทุกสถานะ</option>
+              <option value="active">ใช้งาน</option>
+              <option value="inactive">ปิดใช้งาน</option>
+            </select>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="openCreateModal()">
+            <i class="fas fa-plus me-1"></i>เพิ่มผู้ใช้
+          </button>
+        </div>
+      </div>
+
+      <!-- Summary counts -->
+      <div class="card-body border-bottom py-2">
+        <div class="d-flex gap-4 flex-wrap">
+          <span class="small text-muted">ทั้งหมด: <strong id="cntAll">–</strong></span>
+          <span class="small text-muted">Submitter: <strong id="cntSubmitter">–</strong></span>
+          <span class="small text-muted">Approver: <strong id="cntApprover">–</strong></span>
+          <span class="small text-muted">SuperAdmin: <strong id="cntSuperadmin">–</strong></span>
+          <span class="small text-muted">Managerial: <strong id="cntManagerial">–</strong></span>
+          <span class="small text-muted">ใช้งาน: <strong id="cntActive">–</strong></span>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover table-sm mb-0 align-middle" id="usersTable">
+            <thead class="table-light">
+              <tr>
+                <th class="ps-3">#</th>
+                <th>รหัสพนักงาน</th>
+                <th>ชื่อ-นามสกุล</th>
+                <th>Role</th>
+                <th>สาขา</th>
+                <th>แผนก</th>
+                <th>ตำแหน่ง</th>
+                <th class="text-center">สถานะ</th>
+                <th class="text-center">จัดการ</th>
+              </tr>
+            </thead>
+            <tbody id="usersTbody">
+              <tr>
+                <td colspan="9" class="text-center text-muted py-4">
+                  <i class="fas fa-spinner fa-spin me-1"></i>กำลังโหลด...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── Create / Edit Modal ──────────────────────────────────────────────── -->
+  <div class="modal fade" id="userModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content">
+        <div class="modal-header" id="modalHeader">
+          <h5 class="modal-title" id="modalTitle"><i class="fas fa-user-plus me-2"></i>เพิ่มผู้ใช้งาน</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div id="modalAlert" class="alert alert-danger py-2 small d-none"></div>
+          <form id="userForm" autocomplete="off">
+            <input type="hidden" id="editUserId">
+            <div class="row g-3">
+              <div class="col-sm-6">
+                <label class="form-label fw-semibold small">รหัสพนักงาน <span class="text-danger">*</span></label>
+                <input type="text" class="form-control form-control-sm" id="fEmployeeId" maxlength="50"
+                  placeholder="เช่น EMP001" required>
+              </div>
+              <div class="col-sm-6">
+                <label class="form-label fw-semibold small">ชื่อ-นามสกุล <span class="text-danger">*</span></label>
+                <input type="text" class="form-control form-control-sm" id="fFullName" maxlength="100"
+                  placeholder="ชื่อเต็ม" required>
+              </div>
+              <div class="col-sm-6">
+                <label class="form-label fw-semibold small">Role <span class="text-danger">*</span></label>
+                <select class="form-select form-select-sm" id="fRole" required>
+                  <option value="">-- เลือก Role --</option>
+                  <option value="submitter">Submitter (พนักงานส่งฟอร์ม)</option>
+                  <option value="approver">Approver (ผู้อนุมัติ)</option>
+                  <option value="superadmin">SuperAdmin (ผู้ดูแลระบบ)</option>
+                  <option value="managerial">Managerial (ผู้จัดการ)</option>
+                </select>
+              </div>
+              <div class="col-sm-6">
+                <label class="form-label fw-semibold small">สาขา</label>
+                <select class="form-select form-select-sm" id="fBranch">
+                  <option value="">-- ไม่ระบุ --</option>
+                  <option value="Y5">Y5</option>
+                  <option value="Y8">Y8</option>
+                  <option value="Y11">Y11</option>
+                </select>
+              </div>
+              <div class="col-sm-6">
+                <label class="form-label fw-semibold small">แผนก</label>
+                <input type="text" class="form-control form-control-sm" id="fDepartment" maxlength="100"
+                  placeholder="แผนก">
+              </div>
+              <div class="col-sm-6">
+                <label class="form-label fw-semibold small">ตำแหน่ง</label>
+                <input type="text" class="form-control form-control-sm" id="fPosition" maxlength="100"
+                  placeholder="ตำแหน่ง">
+              </div>
+              <div class="col-sm-6" id="pwdGroup">
+                <label class="form-label fw-semibold small">รหัสผ่าน <span class="text-danger"
+                    id="pwdRequired">*</span></label>
+                <div class="input-group input-group-sm">
+                  <input type="password" class="form-control" id="fPassword" maxlength="100"
+                    placeholder="อย่างน้อย 4 ตัวอักษร" autocomplete="new-password">
+                  <button type="button" class="btn btn-outline-secondary" onclick="togglePwd()">
+                    <i class="fas fa-eye" id="eyeIcon"></i>
+                  </button>
+                </div>
+                <div class="form-text" id="pwdHint"></div>
+              </div>
+              <div class="col-sm-6" id="activeGroup" style="display:none">
+                <label class="form-label fw-semibold small">สถานะ</label>
+                <select class="form-select form-select-sm" id="fIsActive">
+                  <option value="true">ใช้งาน</option>
+                  <option value="false">ปิดใช้งาน</option>
+                </select>
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">ยกเลิก</button>
+          <button type="button" class="btn btn-primary btn-sm" id="modalSaveBtn" onclick="saveUser()">
+            <i class="fas fa-save me-1"></i>บันทึก
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── Delete Confirm Modal ─────────────────────────────────────────────── -->
+  <div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header bg-danger text-white">
+          <h5 class="modal-title"><i class="fas fa-trash-alt me-2"></i>ยืนยันการลบ</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          คุณต้องการลบผู้ใช้ <strong id="deleteUserName"></strong> (<code id="deleteUserEmpId"></code>) ใช่หรือไม่?
+          <div class="alert alert-warning mt-2 small py-2 mb-0">
+            <i class="fas fa-exclamation-triangle me-1"></i>การลบไม่สามารถกู้คืนได้
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">ยกเลิก</button>
+          <button class="btn btn-danger btn-sm" onclick="confirmDelete()">
+            <i class="fas fa-trash-alt me-1"></i>ลบ
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/nav-unified.js"></script>
+  <script>
+    let allUsers = [];
+    let deleteTargetId = null;
+
+    // ── Load all users ──────────────────────────────────────────────────────────
+    async function loadUsers() {
+      try {
+        const res = await fetch('/api/users');
+        if (!res.ok) throw new Error();
+        allUsers = await res.json();
+        renderTable(allUsers);
+        updateCounts(allUsers);
+      } catch {
+        document.getElementById('usersTbody').innerHTML =
+          '<tr><td colspan="9" class="text-center text-danger py-3">โหลดข้อมูลไม่สำเร็จ</td></tr>';
+      }
+    }
+
+    // ── Render table ────────────────────────────────────────────────────────────
+    function roleBadge(role) {
+      const map = {
+        submitter: ['role-submitter', 'พนักงาน'],
+        approver: ['role-approver', 'ผู้อนุมัติ'],
+        superadmin: ['role-superadmin', 'SuperAdmin'],
+        managerial: ['role-managerial', 'Managerial'],
+      };
+      const [cls, label] = map[role] || ['bg-secondary text-white', role];
+      return `<span class="role-badge ${cls}">${label}</span>`;
+    }
+
+    function renderTable(users) {
+      const tbody = document.getElementById('usersTbody');
+      if (users.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted py-4">ไม่พบผู้ใช้</td></tr>';
+        return;
+      }
+      tbody.innerHTML = users.map((u, i) => `
+    <tr>
+      <td class="ps-3 text-muted small">${i + 1}</td>
+      <td><code>${u.employeeId}</code></td>
+      <td>${u.fullName}</td>
+      <td>${roleBadge(u.role)}</td>
+      <td>${u.branch || '<span class="text-muted">–</span>'}</td>
+      <td>${u.department || '<span class="text-muted">–</span>'}</td>
+      <td>${u.position || '<span class="text-muted">–</span>'}</td>
+      <td class="text-center">
+        ${u.isActive
+          ? '<span class="status-active"><i class="fas fa-circle me-1" style="font-size:.6rem"></i>ใช้งาน</span>'
+          : '<span class="status-inactive"><i class="fas fa-circle me-1" style="font-size:.6rem"></i>ปิด</span>'}
+      </td>
+      <td class="text-center">
+        <div class="d-flex gap-1 justify-content-center">
+          <button class="btn btn-sm btn-outline-primary action-btn" title="แก้ไข" onclick="openEditModal(${u.id})">
+            <i class="fas fa-edit fa-sm"></i>
+          </button>
+          <button class="btn btn-sm ${u.isActive ? 'btn-outline-warning' : 'btn-outline-success'} action-btn"
+            title="${u.isActive ? 'ปิดใช้งาน' : 'เปิดใช้งาน'}" onclick="toggleActive(${u.id}, ${!u.isActive})">
+            <i class="fas ${u.isActive ? 'fa-ban' : 'fa-check'} fa-sm"></i>
+          </button>
+          <button class="btn btn-sm btn-outline-danger action-btn" title="ลบ" onclick="openDeleteModal(${u.id})">
+            <i class="fas fa-trash-alt fa-sm"></i>
+          </button>
+        </div>
+      </td>
+    </tr>`).join('');
+    }
+
+    function updateCounts(users) {
+      document.getElementById('cntAll').textContent = users.length;
+      document.getElementById('cntSubmitter').textContent = users.filter(u => u.role === 'submitter').length;
+      document.getElementById('cntApprover').textContent = users.filter(u => u.role === 'approver').length;
+      document.getElementById('cntSuperadmin').textContent = users.filter(u => u.role === 'superadmin').length;
+      document.getElementById('cntManagerial').textContent = users.filter(u => u.role === 'managerial').length;
+      document.getElementById('cntActive').textContent = users.filter(u => u.isActive).length;
+    }
+
+    // ── Filter ──────────────────────────────────────────────────────────────────
+    function filterTable() {
+      const q = document.getElementById('searchInput').value.toLowerCase();
+      const role = document.getElementById('filterRole').value;
+      const status = document.getElementById('filterStatus').value;
+      const filtered = allUsers.filter(u => {
+        const matchQ = !q || u.employeeId.toLowerCase().includes(q) ||
+          u.fullName.toLowerCase().includes(q) ||
+          (u.branch || '').toLowerCase().includes(q);
+        const matchRole = !role || u.role === role;
+        const matchStatus = !status || (status === 'active' ? u.isActive : !u.isActive);
+        return matchQ && matchRole && matchStatus;
+      });
+      renderTable(filtered);
+    }
+
+    // ── Create modal ────────────────────────────────────────────────────────────
+    function openCreateModal() {
+      document.getElementById('editUserId').value = '';
+      document.getElementById('userForm').reset();
+      document.getElementById('modalTitle').innerHTML = '<i class="fas fa-user-plus me-2"></i>เพิ่มผู้ใช้งาน';
+      document.getElementById('modalHeader').className = 'modal-header bg-primary text-white';
+      document.getElementById('modalAlert').classList.add('d-none');
+      document.getElementById('pwdRequired').style.display = '';
+      document.getElementById('pwdHint').textContent = '';
+      document.getElementById('fPassword').required = true;
+      document.getElementById('activeGroup').style.display = 'none';
+      new bootstrap.Modal(document.getElementById('userModal')).show();
+    }
+
+    // ── Edit modal ──────────────────────────────────────────────────────────────
+    function openEditModal(id) {
+      const u = allUsers.find(u => u.id === id);
+      if (!u) return;
+      document.getElementById('editUserId').value = u.id;
+      document.getElementById('fEmployeeId').value = u.employeeId;
+      document.getElementById('fEmployeeId').disabled = true; // cannot change employeeId
+      document.getElementById('fFullName').value = u.fullName;
+      document.getElementById('fRole').value = u.role;
+      document.getElementById('fBranch').value = u.branch || '';
+      document.getElementById('fDepartment').value = u.department || '';
+      document.getElementById('fPosition').value = u.position || '';
+      document.getElementById('fPassword').value = '';
+      document.getElementById('fPassword').required = false;
+      document.getElementById('fIsActive').value = String(u.isActive);
+      document.getElementById('pwdRequired').style.display = 'none';
+      document.getElementById('pwdHint').textContent = 'เว้นว่างไว้หากไม่ต้องการเปลี่ยนรหัสผ่าน';
+      document.getElementById('activeGroup').style.display = '';
+      document.getElementById('modalTitle').innerHTML = `<i class="fas fa-user-edit me-2"></i>แก้ไขผู้ใช้: ${u.fullName}`;
+      document.getElementById('modalHeader').className = 'modal-header bg-primary text-white';
+      document.getElementById('modalAlert').classList.add('d-none');
+      new bootstrap.Modal(document.getElementById('userModal')).show();
+    }
+
+    // ── Save (create or update) ─────────────────────────────────────────────────
+    async function saveUser() {
+      const alertEl = document.getElementById('modalAlert');
+      alertEl.classList.add('d-none');
+      const editId = document.getElementById('editUserId').value;
+      const isEdit = !!editId;
+
+      const employeeId = document.getElementById('fEmployeeId').value.trim();
+      const fullName = document.getElementById('fFullName').value.trim();
+      const role = document.getElementById('fRole').value;
+      const branch = document.getElementById('fBranch').value;
+      const department = document.getElementById('fDepartment').value.trim();
+      const position = document.getElementById('fPosition').value.trim();
+      const password = document.getElementById('fPassword').value;
+      const isActive = document.getElementById('fIsActive').value;
+
+      if (!fullName || !role || (!isEdit && (!employeeId || !password))) {
+        alertEl.textContent = 'กรุณากรอกข้อมูลที่จำเป็นให้ครบ';
+        alertEl.classList.remove('d-none');
+        return;
+      }
+
+      const body = { fullName, role, branch, department, position };
+      if (!isEdit) { body.employeeId = employeeId; body.password = password; }
+      if (isEdit && password) body.password = password;
+      if (isEdit) body.isActive = isActive === 'true';
+
+      const btn = document.getElementById('modalSaveBtn');
+      btn.disabled = true;
+      try {
+        const res = await fetch(isEdit ? `/api/users/${editId}` : '/api/users', {
+          method: isEdit ? 'PUT' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          alertEl.textContent = data.error || 'เกิดข้อผิดพลาด';
+          alertEl.classList.remove('d-none');
+          return;
+        }
+        bootstrap.Modal.getInstance(document.getElementById('userModal')).hide();
+        document.getElementById('fEmployeeId').disabled = false;
+        await loadUsers();
+      } catch {
+        alertEl.textContent = 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์';
+        alertEl.classList.remove('d-none');
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    // ── Toggle active ───────────────────────────────────────────────────────────
+    async function toggleActive(id, newState) {
+      try {
+        const res = await fetch(`/api/users/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ isActive: newState }),
+        });
+        if (!res.ok) { const d = await res.json(); alert(d.error || 'เกิดข้อผิดพลาด'); return; }
+        await loadUsers();
+      } catch { alert('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์'); }
+    }
+
+    // ── Delete ──────────────────────────────────────────────────────────────────
+    function openDeleteModal(id) {
+      const u = allUsers.find(u => u.id === id);
+      if (!u) return;
+      deleteTargetId = id;
+      document.getElementById('deleteUserName').textContent = u.fullName;
+      document.getElementById('deleteUserEmpId').textContent = u.employeeId;
+      new bootstrap.Modal(document.getElementById('deleteModal')).show();
+    }
+
+    async function confirmDelete() {
+      if (!deleteTargetId) return;
+      try {
+        const res = await fetch(`/api/users/${deleteTargetId}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (!res.ok) { alert(data.error || 'เกิดข้อผิดพลาด'); return; }
+        bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
+        deleteTargetId = null;
+        await loadUsers();
+      } catch { alert('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์'); }
+    }
+
+    // ── Helpers ─────────────────────────────────────────────────────────────────
+    function togglePwd() {
+      const input = document.getElementById('fPassword');
+      const icon = document.getElementById('eyeIcon');
+      if (input.type === 'password') { input.type = 'text'; icon.className = 'fas fa-eye-slash'; }
+      else { input.type = 'password'; icon.className = 'fas fa-eye'; }
+    }
+
+    // Re-enable employeeId when modal closes (in case it was disabled from edit)
+    document.getElementById('userModal').addEventListener('hidden.bs.modal', () => {
+      document.getElementById('fEmployeeId').disabled = false;
+    });
+  </script>
+</body>
+
+</html>

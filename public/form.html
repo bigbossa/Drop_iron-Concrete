@@ -1,0 +1,1021 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>แบบฟอร์มบันทึกการเก็บเศษเหล็ก</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="/nav-unified.css" rel="stylesheet">
+  <style>
+    body {
+      background: #eef2f7;
+      font-family: 'Prompt', sans-serif;
+    }
+
+    .page-header {
+      background: linear-gradient(135deg, #1a3a5c, #2563a8);
+      color: #fff;
+      padding: 1rem 1.25rem;
+      border-radius: 10px 10px 0 0;
+    }
+
+    .section-label {
+      font-weight: 700;
+      color: #1a3a5c;
+      border-left: 4px solid #2563a8;
+      padding-left: .6rem;
+      margin-bottom: 1rem;
+    }
+
+    .item-card {
+      background: #fff;
+      border: 1px solid #d0d7e3;
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: .75rem;
+      position: relative;
+    }
+
+    .item-card .item-badge {
+      position: absolute;
+      top: .6rem;
+      right: .6rem;
+    }
+
+    .preview-thumb {
+      max-height: 72px;
+      border-radius: 4px;
+      cursor: zoom-in;
+      border: 1px solid #ccc;
+      margin-top: 4px;
+    }
+
+    .required {
+      color: #dc3545;
+    }
+
+    #recorderChevron {
+      transition: transform .25s ease;
+    }
+
+    /* Camera buttons */
+    .cam-btn {
+      display: flex;
+      align-items: center;
+      gap: .45rem;
+      padding: .35rem .75rem;
+      border-radius: 8px;
+      border: 2px dashed #adb5bd;
+      background: #f8fafc;
+      color: #495057;
+      font-size: .82rem;
+      cursor: pointer;
+      transition: border-color .2s, background .2s;
+      width: 100%;
+    }
+
+    .cam-btn:hover {
+      border-color: #2563a8;
+      background: #e8f0fb;
+      color: #2563a8;
+    }
+
+    .cam-btn i {
+      font-size: 1.1rem;
+    }
+
+    .cam-has-photo {
+      border-color: #198754;
+      background: #f0fff4;
+      color: #0a3622;
+      border-style: solid;
+    }
+
+    .cam-has-photo:hover {
+      border-color: #0a3622;
+    }
+
+    .cam-preview-wrap {
+      position: relative;
+      display: inline-block;
+      margin-top: .4rem;
+    }
+
+    .cam-preview-wrap .cam-del {
+      position: absolute;
+      top: -6px;
+      right: -6px;
+      background: #dc3545;
+      color: #fff;
+      border: none;
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      font-size: .65rem;
+      line-height: 20px;
+      text-align: center;
+      cursor: pointer;
+      padding: 0;
+    }
+
+    /* Camera modal */
+    #ocrModal .modal-content,
+    #photoModal .modal-content {
+      background: #111;
+    }
+
+    #ocrModal .modal-dialog,
+    #photoModal .modal-dialog {
+      max-width: 560px;
+    }
+
+    #ocrVideo,
+    #photoVideo,
+    #ocrPreview,
+    #photoPreview {
+      width: 100%;
+      max-height: 60vh;
+      border-radius: 6px;
+      object-fit: contain;
+      display: block;
+      background: #000;
+    }
+
+    /* Guide overlay */
+    .cam-viewport {
+      position: relative;
+      line-height: 0;
+      max-height: 60vh;
+      overflow: hidden;
+    }
+
+    .cam-guide {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -56%);
+      width: 72%;
+      max-width: 340px;
+      aspect-ratio: 3/1.4;
+      pointer-events: none;
+    }
+
+    .cam-guide-corner {
+      position: absolute;
+      width: 22px;
+      height: 22px;
+      border-color: #0f0;
+      border-style: solid;
+    }
+
+    .cam-guide-corner.tl {
+      top: 0;
+      left: 0;
+      border-width: 3px 0 0 3px;
+    }
+
+    .cam-guide-corner.tr {
+      top: 0;
+      right: 0;
+      border-width: 3px 3px 0 0;
+    }
+
+    .cam-guide-corner.bl {
+      bottom: 0;
+      left: 0;
+      border-width: 0 0 3px 3px;
+    }
+
+    .cam-guide-corner.br {
+      bottom: 0;
+      right: 0;
+      border-width: 0 3px 3px 0;
+    }
+
+    .cam-guide-label {
+      position: absolute;
+      bottom: -22px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: #0f0;
+      font-size: .7rem;
+      white-space: nowrap;
+      text-shadow: 0 0 4px #000;
+    }
+
+    /* OCR result badge */
+    .ocr-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: .4rem;
+      background: #1a1a1a;
+      border: 1px solid #444;
+      border-radius: 8px;
+      padding: .35rem .75rem;
+      color: #fff;
+      font-size: .85rem;
+    }
+
+    .ocr-badge.ocr-found {
+      border-color: #22c55e;
+      color: #22c55e;
+    }
+
+    .ocr-badge.ocr-fail {
+      border-color: #f87171;
+      color: #f87171;
+    }
+
+    .ocr-spin {
+      animation: spin .8s linear infinite;
+      display: inline-block;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    /* Shutter */
+    .shutter-btn {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      border: 4px solid #fff;
+      background: rgba(255, 255, 255, .15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background .15s;
+    }
+
+    .shutter-btn:hover {
+      background: rgba(255, 255, 255, .3);
+    }
+
+    .shutter-btn .inner {
+      width: 46px;
+      height: 46px;
+      border-radius: 50%;
+      background: #fff;
+    }
+
+    /* Sticky submit */
+    .sticky-submit {
+      position: sticky;
+      bottom: 0;
+      z-index: 100;
+      background: #eef2f7;
+      padding: .75rem 0;
+    }
+
+    @media (max-width:575px) {
+      body {
+        background: #fff;
+      }
+
+      .container-lg {
+        padding-left: .75rem;
+        padding-right: .75rem;
+      }
+
+      .page-header {
+        border-radius: 0;
+        padding: .75rem 1rem;
+      }
+
+      .card {
+        border-radius: 0 !important;
+        border-left: none !important;
+        border-right: none !important;
+      }
+
+      .card.shadow-sm {
+        box-shadow: none !important;
+      }
+
+      .item-card {
+        border-radius: 6px;
+        padding: .75rem;
+      }
+
+      .btn-label {
+        display: none;
+      }
+
+      .sticky-submit {
+        border-radius: 0;
+        margin: 0 -.75rem;
+        padding: .5rem .75rem;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Auth guard -->
+  <script>
+    (async () => {
+      try {
+        const r = await fetch('/api/auth/me');
+        if (!r.ok) { window.location.replace('/login.html'); return; }
+        const u = await r.json();
+        if (u.role !== 'submitter') { window.location.replace('/approve.html'); return; }
+        document.getElementById('userInfo').textContent = `${u.fullName} (${u.employeeId})`;
+        const display = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val || '—'; };
+        const hidden = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
+        display('collectorName', u.fullName); hidden('collectorNameHidden', u.fullName);
+        display('branch', u.branch); hidden('branchHidden', u.branch);
+        display('department', u.department); hidden('departmentHidden', u.department);
+        display('position', u.position); hidden('positionHidden', u.position);
+        // Auto-fill first row bringer
+        window._defaultBringer = u.fullName;
+        window._userBranch = (u.branch || '').trim();
+        // Add first row now that branch is known (so dropdown options are correct)
+        addRow();
+        const firstBringer = document.querySelector('[id^="bringer_"]');
+        if (firstBringer && !firstBringer.value) firstBringer.value = u.fullName;
+      } catch { window.location.replace('/login.html'); }
+    })();
+  </script>
+
+  <!-- Navbar -->
+  <nav class="app-topbar">
+    <div class="container-lg d-flex justify-content-between align-items-center app-topbar-inner py-2">
+      <a class="app-brand" href="/"><i class="fas fa-recycle"></i><span>Iron Drop</span></a>
+      <div class="app-nav-actions">
+        <span class="app-page-chip"><i class="fas fa-file-alt"></i>หน้าบันทึก</span>
+        <a href="/status.html" class="btn btn-sm btn-outline-light app-nav-btn"><i class="fas fa-list-ul me-1"></i><span
+            class="btn-label">ติดตามสถานะ</span></a>
+        <span class="app-user-chip" id="userInfo"><i class="fas fa-user"></i>กำลังโหลด...</span>
+        <button class="btn btn-sm btn-outline-light app-nav-btn" onclick="logout()" title="ออกจากระบบ"><i class="fas fa-sign-out-alt"></i><span class="btn-label ms-1">ออก</span></button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container-lg py-3">
+    <div class="card shadow-sm" style="border-radius:10px; border:1px solid #c9d5e8;">
+      <div class="page-header">
+        <h5 class="mb-0 fw-bold"><i class="fas fa-file-alt me-2"></i>แบบฟอร์มบันทึกการเก็บเศษเหล็ก</h5>
+      </div>
+      <div class="card-body p-3">
+
+        <!-- ─── Recorder info ─── -->
+        <div class="mb-3">
+          <button
+            class="btn btn-sm btn-outline-secondary w-100 text-start d-flex justify-content-between align-items-center"
+            type="button" data-bs-toggle="collapse" data-bs-target="#recorderInfo">
+            <span><i class="fas fa-user-circle me-1"></i>ข้อมูลผู้บันทึก</span>
+            <i class="fas fa-chevron-down" id="recorderChevron"></i>
+          </button>
+          <div class="collapse show" id="recorderInfo">
+            <div class="border border-top-0 rounded-bottom p-3 bg-light">
+              <div class="row g-2 small">
+                <div class="col-6 col-md-3"><span class="text-muted">ชื่อ:</span> <span id="collectorName"
+                    class="fw-semibold"></span></div>
+                <div class="col-6 col-md-3"><span class="text-muted">สาขา:</span> <span id="branch"
+                    class="fw-semibold"></span></div>
+                <div class="col-6 col-md-3"><span class="text-muted">แผนก:</span> <span id="department"
+                    class="fw-semibold"></span></div>
+                <div class="col-6 col-md-3"><span class="text-muted">ตำแหน่ง:</span> <span id="position"
+                    class="fw-semibold"></span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Hidden recorder fields -->
+        <input type="hidden" id="collectorNameHidden" name="collectorName">
+        <input type="hidden" id="branchHidden" name="branch">
+        <input type="hidden" id="departmentHidden" name="department">
+        <input type="hidden" id="positionHidden" name="position">
+
+        <!-- ─── Items section ─── -->
+        <div class="section-label mt-2"><i class="fas fa-cubes me-1"></i>รายการเศษเหล็ก</div>
+        <div id="itemsContainer"></div>
+
+        <button type="button" class="btn btn-outline-primary btn-sm w-100 mb-3" onclick="addRow()">
+          <i class="fas fa-plus me-1"></i>เพิ่มรายการ
+        </button>
+
+        <!-- ─── Submit ─── -->
+        <div class="sticky-submit">
+          <button type="button" class="btn btn-primary w-100 fw-bold py-2" onclick="submitForm()" id="btnSubmit">
+            <i class="fas fa-paper-plane me-2"></i>ส่งข้อมูล
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── Modal 1: OCR Camera (ถ่ายชั่งน้ำหนัก + อ่านค่า OCR) ─── -->
+  <div class="modal fade" id="ocrModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content">
+        <div class="modal-header border-secondary py-2">
+          <h6 class="modal-title text-white"><i class="fas fa-tachometer-alt me-2"></i>ถ่ายรูปชั่งน้ำหนัก (OCR)</h6>
+          <button type="button" class="btn-close btn-close-white" onclick="closeOcrCamera()"></button>
+        </div>
+        <div class="modal-body p-2">
+          <div class="cam-viewport">
+            <video id="ocrVideo" autoplay playsinline muted></video>
+            <div class="cam-guide" id="ocrGuide">
+              <div class="cam-guide-corner tl"></div>
+              <div class="cam-guide-corner tr"></div>
+              <div class="cam-guide-corner bl"></div>
+              <div class="cam-guide-corner br"></div>
+              <div class="cam-guide-label"><i class="fas fa-tachometer-alt me-1"></i>เล็งหน้าจอตาชั่งให้อยู่ในกรอบนี้
+              </div>
+            </div>
+          </div>
+          <canvas id="ocrCanvas" style="display:none"></canvas>
+          <img id="ocrPreview" src="" style="display:none">
+          <div id="ocrError" class="alert alert-warning mt-2 mb-0 small d-none">
+            <i class="fas fa-exclamation-triangle me-1"></i><span id="ocrErrorMsg"></span>
+          </div>
+        </div>
+        <div class="modal-footer border-secondary justify-content-center py-3">
+          <!-- Shoot -->
+          <div id="ocrFooterShoot" class="d-flex align-items-center gap-3">
+            <button type="button" class="btn btn-outline-light btn-sm px-3" onclick="closeOcrCamera()">ยกเลิก</button>
+            <div class="shutter-btn" onclick="ocrShoot()">
+              <div class="inner"></div>
+            </div>
+            <div style="width:80px"></div>
+          </div>
+          <!-- OCR result -->
+          <div id="ocrFooterConfirm" style="display:none" class="d-flex flex-column align-items-center gap-2 w-100">
+            <div id="ocrResultRow" class="d-flex align-items-center gap-2 flex-wrap justify-content-center">
+              <span class="ocr-badge" id="ocrBadge"><i class="fas fa-circle-notch ocr-spin"></i>
+                กำลังอ่านตัวเลข...</span>
+              <div id="ocrActionRow" style="display:none" class="d-flex align-items-center gap-2">
+                <span class="text-white small">น้ำหนัก:</span>
+                <input type="number" id="ocrWeightInput" class="form-control form-control-sm" style="width:90px"
+                  step="0.01" min="0">
+                <span class="text-muted small">กก.</span>
+                <button type="button" class="btn btn-success btn-sm" onclick="ocrUse()">
+                  <i class="fas fa-check me-1"></i>ใช้
+                </button>
+              </div>
+            </div>
+            <div class="d-flex gap-2">
+              <button type="button" class="btn btn-outline-light btn-sm" onclick="ocrRetake()">
+                <i class="fas fa-redo me-1"></i>ถ่ายใหม่
+              </button>
+              <button type="button" class="btn btn-outline-warning btn-sm" onclick="ocrUse(true)">
+                <i class="fas fa-forward me-1"></i>ข้าม OCR
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── Modal 2: Photo Camera (ถ่ายรูปเก็บเฉยๆ) ─── -->
+  <div class="modal fade" id="photoModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content">
+        <div class="modal-header border-secondary py-2">
+          <h6 class="modal-title text-white"><i class="fas fa-image me-2"></i>ถ่ายรูปชั่งน้ำหนัก</h6>
+          <button type="button" class="btn-close btn-close-white" onclick="closePhotoCamera()"></button>
+        </div>
+        <div class="modal-body p-2">
+          <div class="cam-viewport">
+            <video id="photoVideo" autoplay playsinline muted></video>
+          </div>
+          <canvas id="photoCanvas" style="display:none"></canvas>
+          <img id="photoPreview" src="" style="display:none">
+          <div id="photoError" class="alert alert-warning mt-2 mb-0 small d-none">
+            <i class="fas fa-exclamation-triangle me-1"></i><span id="photoErrorMsg"></span>
+          </div>
+        </div>
+        <div class="modal-footer border-secondary justify-content-center py-3">
+          <!-- Shoot -->
+          <div id="photoFooterShoot" class="d-flex align-items-center gap-3">
+            <button type="button" class="btn btn-outline-light btn-sm px-3" onclick="closePhotoCamera()">ยกเลิก</button>
+            <div class="shutter-btn" onclick="photoShoot()">
+              <div class="inner"></div>
+            </div>
+            <div style="width:80px"></div>
+          </div>
+          <!-- Confirm -->
+          <div id="photoFooterConfirm" style="display:none" class="d-flex gap-2">
+            <button type="button" class="btn btn-outline-light btn-sm" onclick="photoRetake()">
+              <i class="fas fa-redo me-1"></i>ถ่ายใหม่
+            </button>
+            <button type="button" class="btn btn-success btn-sm px-4" onclick="photoUse()">
+              <i class="fas fa-check me-1"></i>ใช้รูปนี้
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── Image preview modal ─── -->
+  <div class="modal fade" id="imgModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content">
+        <div class="modal-body p-0 text-center bg-dark">
+          <img id="imgModalSrc" src="" class="img-fluid" style="max-height:80vh">
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">ปิด</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/nav-unified.js"></script>
+  <script>
+    /* ── State ── */
+    let rowCount = 0;
+
+    // OCR camera state
+    let _ocrStream = null, _ocrTargetIdx = null, _ocrBlob = null;
+    // Photo camera state
+    let _photoStream = null, _photoTargetIdx = null, _photoBlob = null;
+
+    const ocrPhotos = {};   // idx → File  (ocr_photo — รูปตาชั่ง)
+    const capturedPhotos = {};   // idx → File  (weighing_photo — รูปถ่ายเก็บ)
+
+    const BRANCH_AREAS = {
+      'Y5': ['โรงงาน A', 'โรงงาน B', 'โรงงาน C', 'โรงงาน D', 'โรงงาน E', 'โรงงาน F', 'โรงงาน G', 'โรงงาน H', 'ซ่อมบำรุง', 'สโตร์'],
+      'Y8': ['โรงงาน A', 'โรงงาน B', 'โรงงาน C', 'โรงงาน D', 'โรงงาน E', 'โรงงาน F', 'โรงงาน G', 'โรงงาน H', 'ซ่อมบำรุง', 'สโตร์'],
+      'Y11': ['โรงงาน A', 'โรงงาน B', 'โรงงาน C', 'โรงงาน D', 'โรงงาน E', 'โรงงาน F', 'ซ่อมบำรุง', 'สโตร์'],
+    };
+
+    function buildAreaSelect(name, id) {
+      const branch = (window._userBranch || '').toUpperCase();
+      const opts = BRANCH_AREAS[branch];
+      if (!opts) {
+        return `<input type="text" class="form-control form-control-sm" name="${name}" id="${id}" placeholder="เช่น โรงงาน A" required>`;
+      }
+      let html = `<select class="form-select form-select-sm" name="${name}" id="${id}" required>`;
+      html += `<option value="">— เลือกพื้นที่ —</option>`;
+      opts.forEach(o => { html += `<option value="${o}">${o}</option>`; });
+      html += `</select>`;
+      return html;
+    }
+
+    const TYPE_OPTIONS = [
+      { value: '', label: '— เลือกประเภท —', group: '' },
+      { value: 'thin_1', label: 'เศษลวดหัวแบ่ง', group: 'เหล็กบาง' },
+      { value: 'thin_2', label: 'สายแพ็คเหล็ก', group: 'เหล็กบาง' },
+      { value: 'thin_3', label: 'เศษลวดปลอก', group: 'เหล็กบาง' },
+      { value: 'thin_4', label: 'ลวดผูกเหล็กรัดลวดปลอก', group: 'เหล็กบาง' },
+      { value: 'thick_1', label: 'เศษเหล็กโดเวล', group: 'เหล็กหนา' },
+      { value: 'thick_2', label: 'เหล็กรูปพรรณเศษชิ้นส่วนเครื่องจักร/เศษเหล็กเพลท', group: 'เหล็กหนา' },
+      { value: 'special_1', label: 'เศษเหล็กแผ่นจากการตัดเพลทเครื่องตัดพลาสม่า', group: 'เหล็กหนาพิเศษ' },
+    ];
+
+    function buildTypeSelect(name, id) {
+      let groups = {}, html = `<select class="form-select form-select-sm" name="${name}" id="${id}" required>`;
+      TYPE_OPTIONS.forEach(o => {
+        if (!o.group) { html += `<option value="">${o.label}</option>`; return; }
+        if (!groups[o.group]) { groups[o.group] = true; html += `<optgroup label="${o.group}">`; }
+        html += `<option value="${o.value}">${o.label}</option>`;
+      });
+      // close last optgroup
+      html += `</optgroup></select>`;
+      return html;
+    }
+
+    /* ── Add row ── */
+    function addRow() {
+      const idx = rowCount++;
+      const defaultBringer = window._defaultBringer || '';
+      const today = new Date().toISOString().split('T')[0];
+
+      const card = document.createElement('div');
+      card.className = 'item-card';
+      card.id = `row_${idx}`;
+      card.innerHTML = `
+    <span class="badge bg-primary item-badge">#${idx + 1}</span>
+    <div class="row g-2 mb-2">
+      <div class="col-6 col-md-3">
+        <label class="form-label form-label-sm mb-1">วันที่ <span class="required">*</span></label>
+        <input type="date" class="form-control form-control-sm" name="date_${idx}" id="date_${idx}" value="${today}" required>
+      </div>
+      <div class="col-6 col-md-3">
+        <label class="form-label form-label-sm mb-1">เศษจากพื้นที่ (แผนก/โรงงาน) <span class="required">*</span></label>
+        ${buildAreaSelect(`scrapArea_${idx}`, `scrapArea_${idx}`)}
+      </div>
+      <div class="col-12 col-md-6">
+        <label class="form-label form-label-sm mb-1">ประเภทเศษเหล็ก <span class="required">*</span></label>
+        ${buildTypeSelect(`scrapType_${idx}`, `scrapType_${idx}`)}
+      </div>
+    </div>
+
+    <div class="row g-2 mb-2">
+      <div class="col-12 col-md-6">
+        <label class="form-label form-label-sm mb-1">
+          <i class="fas fa-weight-hanging text-primary me-1"></i>น้ำหนัก (กก.) <span class="required">*</span>
+        </label>
+        <!-- OCR camera button: ถ่ายรูปตาชั่ง + อ่าน OCR + เก็บรูป -->
+        <button type="button" class="cam-btn mb-1" id="ocrBtn_${idx}" onclick="openOcrCamera(${idx})">
+          <i class="fas fa-camera"></i><span>ถ่ายรูปชั่งน้ำหนัก (OCR)</span>
+        </button>
+        <div id="ocrPrev_${idx}"></div>
+        <input type="number" class="form-control form-control-sm" name="weight_${idx}" id="weight_${idx}"
+               step="0.01" min="0" placeholder="0.00" required>
+      </div>
+      <div class="col-12 col-md-6" hidden >
+        <label class="form-label form-label-sm mb-1">ผู้นำส่ง</label>
+        <input type="text" class="form-control form-control-sm" name="bringer_${idx}" id="bringer_${idx}"
+               placeholder="ชื่อผู้นำส่ง" value="${defaultBringer}">
+      </div>
+    </div>
+
+    <div class="mb-2">
+      <label class="form-label form-label-sm mb-1">
+        <i class="fas fa-image text-secondary me-1"></i>รูปถ่ายชั่งน้ำหนัก
+      </label>
+      <!-- Photo-only camera button: เก็บรูปเฉยๆ ไม่ทำ OCR -->
+      <button type="button" class="cam-btn" id="camBtn_${idx}" onclick="openPhotoCamera(${idx})">
+        <i class="fas fa-camera"></i><span>ถ่ายรูป</span>
+      </button>
+      <div id="prev_${idx}"></div>
+      <input type="file" name="weighingPhoto_${idx}" id="weighingPhoto_${idx}"
+             accept="image/*" style="display:none" onchange="handleFileInput(${idx}, this)">
+    </div>
+
+    <div class="text-end">
+      <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeRow(${idx})">
+        <i class="fas fa-trash-alt me-1"></i>ลบรายการนี้
+      </button>
+    </div>
+  `;
+      document.getElementById('itemsContainer').appendChild(card);
+    }
+
+    function removeRow(idx) {
+      const el = document.getElementById(`row_${idx}`);
+      if (el) el.remove();
+      delete capturedPhotos[idx];
+      delete ocrPhotos[idx];
+    }
+
+    /* ── File input handler (manual file pick) ── */
+    function handleFileInput(idx, input) {
+      if (!input.files || !input.files[0]) return;
+      const file = input.files[0];
+      capturedPhotos[idx] = file;
+      const url = URL.createObjectURL(file);
+      showPhotoPreview(idx, url);
+      const btn = document.getElementById(`camBtn_${idx}`);
+      if (btn) { btn.classList.add('cam-has-photo'); btn.innerHTML = '<i class="fas fa-check-circle"></i><span>มีรูปแล้ว — ถ่ายใหม่</span>'; }
+    }
+
+    /* ════════════════════════════════════════════
+       OCR Camera — ถ่ายตาชั่ง + อ่านค่า OCR
+       ════════════════════════════════════════════ */
+
+    function _cropGuide(srcCanvas) {
+      const video = document.getElementById('ocrVideo');
+      const guide = document.getElementById('ocrGuide');
+      const vr = video.getBoundingClientRect();
+      const gr = guide.getBoundingClientRect();
+      const sx = srcCanvas.width / vr.width;
+      const sy = srcCanvas.height / vr.height;
+      const cx = Math.max(0, Math.round((gr.left - vr.left) * sx));
+      const cy = Math.max(0, Math.round((gr.top - vr.top) * sy));
+      const cw = Math.min(srcCanvas.width - cx, Math.round(gr.width * sx));
+      const ch = Math.min(srcCanvas.height - cy, Math.round(gr.height * sy));
+      const oc = document.createElement('canvas');
+      oc.width = cw; oc.height = ch;
+      oc.getContext('2d').drawImage(srcCanvas, cx, cy, cw, ch, 0, 0, cw, ch);
+      return oc;
+    }
+
+    async function openOcrCamera(idx) {
+      _ocrTargetIdx = String(idx);
+      _ocrBlob = null;
+      document.getElementById('ocrVideo').style.display = 'block';
+      document.getElementById('ocrPreview').style.display = 'none';
+      document.getElementById('ocrFooterShoot').style.display = 'flex';
+      document.getElementById('ocrFooterConfirm').style.display = 'none';
+      document.getElementById('ocrGuide').style.display = '';
+      document.getElementById('ocrError').classList.add('d-none');
+      try {
+        _ocrStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 960 } },
+          audio: false
+        });
+        document.getElementById('ocrVideo').srcObject = _ocrStream;
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('ocrModal')).show();
+      } catch (err) {
+        const msg = err.name === 'NotAllowedError' ? 'ไม่ได้รับอนุญาตใช้กล้อง' :
+          err.name === 'NotFoundError' ? 'ไม่พบกล้องในอุปกรณ์นี้' :
+            'ไม่สามารถเปิดกล้องได้: ' + err.message;
+        document.getElementById('ocrError').classList.remove('d-none');
+        document.getElementById('ocrErrorMsg').textContent = msg;
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('ocrModal')).show();
+      }
+    }
+
+    function ocrShoot() {
+      const video = document.getElementById('ocrVideo');
+      const canvas = document.getElementById('ocrCanvas');
+      canvas.width = video.videoWidth || 1280;
+      canvas.height = video.videoHeight || 960;
+      canvas.getContext('2d').drawImage(video, 0, 0);
+      const cropCanvas = _cropGuide(canvas);
+      canvas.toBlob(blob => {
+        _ocrBlob = blob;
+        document.getElementById('ocrPreview').src = URL.createObjectURL(blob);
+        document.getElementById('ocrPreview').style.display = 'block';
+        document.getElementById('ocrVideo').style.display = 'none';
+        document.getElementById('ocrGuide').style.display = 'none';
+        document.getElementById('ocrFooterShoot').style.display = 'none';
+        if (_ocrStream) _ocrStream.getTracks().forEach(t => t.enabled = false);
+        // Reset OCR UI
+        document.getElementById('ocrBadge').className = 'ocr-badge';
+        document.getElementById('ocrBadge').innerHTML = '<i class="fas fa-circle-notch ocr-spin"></i> กำลังอ่านตัวเลข...';
+        document.getElementById('ocrActionRow').style.display = 'none';
+        document.getElementById('ocrResultRow').style.display = 'flex';
+        document.getElementById('ocrFooterConfirm').style.display = 'flex';
+        cropCanvas.toBlob(cropBlob => runOcr(cropBlob), 'image/jpeg', 0.92);
+      }, 'image/jpeg', 0.88);
+    }
+
+    async function runOcr(cropBlob) {
+      try {
+        const img = await createImageBitmap(cropBlob);
+        const MAX = 800, scale = Math.min(1, MAX / img.width);
+        const oc = document.createElement('canvas');
+        oc.width = Math.round(img.width * scale);
+        oc.height = Math.round(img.height * scale);
+        oc.getContext('2d').drawImage(img, 0, 0, oc.width, oc.height);
+        const b64 = oc.toDataURL('image/jpeg', 0.88).split(',')[1];
+        const res = await fetch('/api/ocr-weight', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ imageBase64: b64 })
+        });
+        const data = await res.json();
+        const badge = document.getElementById('ocrBadge');
+        const weightInput = document.getElementById('ocrWeightInput');
+        if (data.weight !== null && data.weight !== undefined && !isNaN(data.weight)) {
+          badge.className = 'ocr-badge ocr-found';
+          badge.innerHTML = `<i class="fas fa-check-circle"></i> อ่านได้: <strong>${data.weight} กก.</strong>`;
+          weightInput.value = data.weight;
+        } else {
+          badge.className = 'ocr-badge ocr-fail';
+          badge.innerHTML = '<i class="fas fa-exclamation-circle"></i> อ่านไม่ได้ — กรอกเอง';
+          weightInput.value = '';
+        }
+        document.getElementById('ocrActionRow').style.display = 'flex';
+      } catch {
+        document.getElementById('ocrBadge').className = 'ocr-badge ocr-fail';
+        document.getElementById('ocrBadge').innerHTML = '<i class="fas fa-exclamation-circle"></i> OCR ผิดพลาด — กรอกเอง';
+        document.getElementById('ocrWeightInput').value = '';
+        document.getElementById('ocrActionRow').style.display = 'flex';
+      }
+    }
+
+    function ocrUse(skipOcr) {
+      if (!_ocrBlob || _ocrTargetIdx === null) return;
+      const idx = _ocrTargetIdx;
+      // บันทึกรูป OCR แยกต่างหาก
+      const ocrFile = new File([_ocrBlob], `ocr_${Date.now()}.jpg`, { type: 'image/jpeg' });
+      ocrPhotos[idx] = ocrFile;
+      showOcrPreview(idx, URL.createObjectURL(_ocrBlob));
+      // กรอกน้ำหนัก
+      if (!skipOcr) {
+        const w = parseFloat(document.getElementById('ocrWeightInput').value);
+        if (!isNaN(w) && w > 0) {
+          const weightEl = document.getElementById(`weight_${idx}`);
+          if (weightEl) weightEl.value = w;
+          const ocrBtn = document.getElementById(`ocrBtn_${idx}`);
+          if (ocrBtn) { ocrBtn.classList.add('cam-has-photo'); ocrBtn.innerHTML = `<i class="fas fa-check-circle"></i><span>${w} กก. — ถ่ายใหม่</span>`; }
+        }
+      } else {
+        const ocrBtn = document.getElementById(`ocrBtn_${idx}`);
+        if (ocrBtn) { ocrBtn.classList.add('cam-has-photo'); ocrBtn.innerHTML = '<i class="fas fa-image"></i><span>ถ่ายแล้ว — กรอกน้ำหนักเอง</span>'; }
+      }
+      closeOcrCamera();
+    }
+
+    function ocrRetake() {
+      _ocrBlob = null;
+      document.getElementById('ocrPreview').style.display = 'none';
+      document.getElementById('ocrVideo').style.display = 'block';
+      document.getElementById('ocrGuide').style.display = '';
+      document.getElementById('ocrFooterShoot').style.display = 'flex';
+      document.getElementById('ocrFooterConfirm').style.display = 'none';
+      if (_ocrStream) _ocrStream.getTracks().forEach(t => t.enabled = true);
+    }
+
+    function closeOcrCamera() {
+      if (_ocrStream) { _ocrStream.getTracks().forEach(t => t.stop()); _ocrStream = null; }
+      const m = bootstrap.Modal.getInstance(document.getElementById('ocrModal'));
+      if (m) m.hide();
+    }
+
+    /* ════════════════════════════════════════════
+       Photo Camera — ถ่ายรูปเก็บเฉยๆ (ไม่มี OCR)
+       ════════════════════════════════════════════ */
+
+    async function openPhotoCamera(idx) {
+      _photoTargetIdx = String(idx);
+      _photoBlob = null;
+      document.getElementById('photoVideo').style.display = 'block';
+      document.getElementById('photoPreview').style.display = 'none';
+      document.getElementById('photoFooterShoot').style.display = 'flex';
+      document.getElementById('photoFooterConfirm').style.display = 'none';
+      document.getElementById('photoError').classList.add('d-none');
+      try {
+        _photoStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 960 } },
+          audio: false
+        });
+        document.getElementById('photoVideo').srcObject = _photoStream;
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('photoModal')).show();
+      } catch (err) {
+        const msg = err.name === 'NotAllowedError' ? 'ไม่ได้รับอนุญาตใช้กล้อง' :
+          err.name === 'NotFoundError' ? 'ไม่พบกล้องในอุปกรณ์นี้' :
+            'ไม่สามารถเปิดกล้องได้: ' + err.message;
+        document.getElementById('photoError').classList.remove('d-none');
+        document.getElementById('photoErrorMsg').textContent = msg;
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('photoModal')).show();
+      }
+    }
+
+    function photoShoot() {
+      const video = document.getElementById('photoVideo');
+      const canvas = document.getElementById('photoCanvas');
+      canvas.width = video.videoWidth || 1280;
+      canvas.height = video.videoHeight || 960;
+      canvas.getContext('2d').drawImage(video, 0, 0);
+      canvas.toBlob(blob => {
+        _photoBlob = blob;
+        document.getElementById('photoPreview').src = URL.createObjectURL(blob);
+        document.getElementById('photoPreview').style.display = 'block';
+        document.getElementById('photoVideo').style.display = 'none';
+        document.getElementById('photoFooterShoot').style.display = 'none';
+        document.getElementById('photoFooterConfirm').style.display = 'flex';
+        if (_photoStream) _photoStream.getTracks().forEach(t => t.enabled = false);
+      }, 'image/jpeg', 0.88);
+    }
+
+    function photoUse() {
+      if (!_photoBlob || _photoTargetIdx === null) return;
+      const idx = _photoTargetIdx;
+      capturedPhotos[idx] = new File([_photoBlob], `photo_${Date.now()}.jpg`, { type: 'image/jpeg' });
+      showPhotoPreview(idx, URL.createObjectURL(_photoBlob));
+      const btn = document.getElementById(`camBtn_${idx}`);
+      if (btn) { btn.classList.add('cam-has-photo'); btn.innerHTML = '<i class="fas fa-check-circle"></i><span>มีรูปแล้ว — ถ่ายใหม่</span>'; }
+      closePhotoCamera();
+    }
+
+    function photoRetake() {
+      _photoBlob = null;
+      document.getElementById('photoPreview').style.display = 'none';
+      document.getElementById('photoVideo').style.display = 'block';
+      document.getElementById('photoFooterShoot').style.display = 'flex';
+      document.getElementById('photoFooterConfirm').style.display = 'none';
+      if (_photoStream) _photoStream.getTracks().forEach(t => t.enabled = true);
+    }
+
+    function closePhotoCamera() {
+      if (_photoStream) { _photoStream.getTracks().forEach(t => t.stop()); _photoStream = null; }
+      const m = bootstrap.Modal.getInstance(document.getElementById('photoModal'));
+      if (m) m.hide();
+    }
+
+    /* ── Photo preview helpers ── */
+
+    // Preview สำหรับรูป OCR (แสดงใต้ปุ่ม OCR)
+    function showOcrPreview(idx, url) {
+      const container = document.getElementById(`ocrPrev_${idx}`);
+      if (!container) return;
+      container.innerHTML = `
+    <div class="cam-preview-wrap">
+      <img src="${url}" class="preview-thumb" onclick="openImgModal('${url}')">
+      <button type="button" class="cam-del" title="ลบรูป" onclick="clearOcrPhoto(${idx})">&times;</button>
+    </div>`;
+    }
+
+    function clearOcrPhoto(idx) {
+      delete ocrPhotos[idx];
+      const container = document.getElementById(`ocrPrev_${idx}`);
+      if (container) container.innerHTML = '';
+      const ocrBtn = document.getElementById(`ocrBtn_${idx}`);
+      if (ocrBtn) { ocrBtn.classList.remove('cam-has-photo'); ocrBtn.innerHTML = '<i class="fas fa-camera"></i><span>ถ่ายรูปชั่งน้ำหนัก (OCR)</span>'; }
+    }
+
+    // Preview สำหรับรูปถ่ายเก็บ (แสดงใต้ปุ่มถ่ายรูป)
+    function showPhotoPreview(idx, url) {
+      const container = document.getElementById(`prev_${idx}`);
+      if (!container) return;
+      container.innerHTML = `
+    <div class="cam-preview-wrap">
+      <img src="${url}" class="preview-thumb" onclick="openImgModal('${url}')">
+      <button type="button" class="cam-del" title="ลบรูป"
+              onclick="clearPhoto(${idx})">&times;</button>
+    </div>`;
+    }
+
+    function clearPhoto(idx) {
+      delete capturedPhotos[idx];
+      const container = document.getElementById(`prev_${idx}`);
+      if (container) container.innerHTML = '';
+      const fileInput = document.getElementById(`weighingPhoto_${idx}`);
+      if (fileInput) fileInput.value = '';
+      const camBtn = document.getElementById(`camBtn_${idx}`);
+      if (camBtn) { camBtn.classList.remove('cam-has-photo'); camBtn.innerHTML = '<i class="fas fa-camera"></i><span>ถ่ายรูป</span>'; }
+    }
+
+    function openImgModal(url) {
+      document.getElementById('imgModalSrc').src = url;
+      bootstrap.Modal.getOrCreateInstance(document.getElementById('imgModal')).show();
+    }
+
+    /* ── Submit ── */
+    async function submitForm() {
+      const rows = document.querySelectorAll('[id^="row_"]');
+      if (rows.length === 0) {
+        alert('กรุณาเพิ่มรายการอย่างน้อย 1 รายการ');
+        return;
+      }
+
+      const fd = new FormData();
+      fd.append('collectorName', document.getElementById('collectorNameHidden').value);
+      fd.append('branch', document.getElementById('branchHidden').value);
+      fd.append('department', document.getElementById('departmentHidden').value);
+      fd.append('position', document.getElementById('positionHidden').value);
+
+      let valid = true;
+      rows.forEach(card => {
+        const i = card.id.replace('row_', '');
+        const date = document.getElementById(`date_${i}`)?.value || '';
+        const scrapArea = document.getElementById(`scrapArea_${i}`)?.value?.trim() || '';
+        const scrapType = document.getElementById(`scrapType_${i}`)?.value || '';
+        const weight = document.getElementById(`weight_${i}`)?.value || '';
+        const bringer = document.getElementById(`bringer_${i}`)?.value?.trim() || '';
+        if (!date || !scrapArea || !scrapType || !weight) { valid = false; return; }
+        fd.append(`date_${i}`, date);
+        fd.append(`scrapArea_${i}`, scrapArea);
+        fd.append(`scrapType_${i}`, scrapType);
+        fd.append(`weight_${i}`, weight);
+        fd.append(`bringer_${i}`, bringer);
+        if (capturedPhotos[i]) fd.append(`weighingPhoto_${i}`, capturedPhotos[i]);
+        if (ocrPhotos[i]) fd.append(`ocrPhoto_${i}`, ocrPhotos[i]);
+      });
+
+      if (!valid) { alert('กรุณากรอกข้อมูลให้ครบถ้วนในทุกรายการ (วันที่, พื้นที่, ประเภท, น้ำหนัก)'); return; }
+
+      const btn = document.getElementById('btnSubmit');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>กำลังส่ง...';
+
+      try {
+        const res = await fetch('/api/submit', { method: 'POST', body: fd });
+        const data = await res.json();
+        if (data.success) {
+          window.location.href = '/status.html';
+        } else {
+          alert('เกิดข้อผิดพลาด: ' + (data.error || 'ไม่ทราบสาเหตุ'));
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fas fa-paper-plane me-2"></i>ส่งข้อมูล';
+        }
+      } catch {
+        alert('ไม่สามารถส่งข้อมูลได้ กรุณาตรวจสอบการเชื่อมต่อ');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-paper-plane me-2"></i>ส่งข้อมูล';
+      }
+    }
+
+    /* ── Auth ── */
+    async function logout() {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      window.location.replace('/login.html');
+    }
+
+    /* ── Init ── */
+    document.addEventListener('DOMContentLoaded', () => {
+      // Chevron toggle for recorder info
+      const collapseEl = document.getElementById('recorderInfo');
+      if (collapseEl) {
+        collapseEl.addEventListener('show.bs.collapse', () => {
+          document.getElementById('recorderChevron').style.transform = 'rotate(180deg)';
+        });
+        collapseEl.addEventListener('hide.bs.collapse', () => {
+          document.getElementById('recorderChevron').style.transform = 'rotate(0deg)';
+        });
+      }
+    });
+    // Note: first addRow() is called from the auth guard after branch is known
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>รายการที่ทิ้งแล้วและขายออก</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link href="/nav-unified.css" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Prompt', sans-serif;
+      background: #f4f6f9;
+      font-size: .9rem;
+    }
+
+    .page-header {
+      background: linear-gradient(135deg, #1e3a5f, #2563eb);
+      color: #fff;
+      padding: 1rem 1.25rem;
+      border-radius: 0 0 0 0;
+    }
+
+    .card {
+      border-radius: .6rem;
+    }
+
+    .kpi-card {
+      border-radius: .5rem;
+      padding: .6rem .8rem;
+      text-align: center;
+    }
+
+    .kpi-num {
+      font-size: 1.55rem;
+      font-weight: 600;
+      line-height: 1.1;
+    }
+
+    .kpi-label {
+      font-size: .72rem;
+      margin-top: .15rem;
+    }
+
+    .section-label {
+      font-weight: 600;
+      color: #374151;
+      border-left: 3px solid #2563eb;
+      padding-left: .6rem;
+      margin-bottom: .75rem;
+    }
+
+    /* Direction badges */
+    .dir-in {
+      background: #d1fae5;
+      color: #065f46;
+      border: 1px solid #6ee7b7;
+      font-weight: 600;
+    }
+
+    .dir-out {
+      background: #fee2e2;
+      color: #991b1b;
+      border: 1px solid #fca5a5;
+      font-weight: 600;
+    }
+
+    /* Type group badges */
+    .tbadge-thin {
+      background: #dbeafe;
+      color: #1e40af;
+      border: 1px solid #93c5fd;
+    }
+
+    .tbadge-thick {
+      background: #ffedd5;
+      color: #7c2d12;
+      border: 1px solid #fdba74;
+    }
+
+    .tbadge-special {
+      background: #fce7f3;
+      color: #831843;
+      border: 1px solid #f9a8d4;
+    }
+
+    .event-row {
+      padding: .65rem .9rem;
+      border-bottom: 1px solid #f0f0f0;
+      transition: background .12s;
+    }
+
+    .event-row:last-child {
+      border-bottom: none;
+    }
+
+    .event-row:hover {
+      background: #f8fafc;
+    }
+
+    .log-create {
+      background: #d1fae5;
+      color: #065f46;
+      border: 1px solid #6ee7b7;
+      font-weight: 600;
+    }
+
+    .log-cancel {
+      background: #fee2e2;
+      color: #991b1b;
+      border: 1px solid #fca5a5;
+      font-weight: 600;
+    }
+
+    .nav-tabs .nav-link {
+      font-size: .85rem;
+    }
+
+    @media (max-width: 575px) {
+
+    .hdr-actions .btn-label {
+      display: none;
+    }
+
+    .hdr-actions .btn {
+      padding: .3rem .55rem;
+    }
+
+    .kpi-num {
+      font-size: 1.25rem;
+    }
+    }
+
+    .filter-row {
+      gap: .5rem;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container-fluid px-3 py-3" style="max-width:1100px">
+    <div class="card shadow-sm mb-4">
+      <div class="page-header app-topbar">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 app-topbar-inner py-1">
+          <div>
+            <h5 class="mb-0"><i class="fas fa-exchange-alt me-2"></i>รายการที่ทิ้งแล้วและขายออก</h5>
+            <small class="opacity-75">ติดตามปริมาณเหล็กที่ทิ้งแล้วและขายออกแต่ละครั้ง</small>
+          </div>
+          <div class="d-flex align-items-center gap-2 hdr-actions flex-wrap app-nav-actions">
+            <span class="app-page-chip"><i class="fas fa-exchange-alt"></i>หน้าประวัติ</span>
+            <a href="/approve.html" id="btnApprove" class="btn btn-outline-light btn-sm app-nav-btn d-none" title="หน้าอนุมัติ">
+              <i class="fas fa-tasks"></i><span class="btn-label ms-1">อนุมัติ</span>
+            </a>
+            <a href="/managerial.html" id="btnManagerial" class="btn btn-outline-light btn-sm app-nav-btn d-none"
+              title="รายงานทิ้ง">
+              <i class="fas fa-recycle"></i><span class="btn-label ms-1">รายงาน</span>
+            </a>
+            <span class="app-user-chip" id="userInfo"><i class="fas fa-user"></i>กำลังโหลด...</span>
+            <button class="btn btn-outline-light btn-sm app-nav-btn" onclick="logout()" title="ออกจากระบบ">
+              <i class="fas fa-sign-out-alt"></i><span class="btn-label ms-1">ออกจากระบบ</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- KPI summary -->
+      <div class="card-body border-bottom" id="kpiSection">
+        <div class="text-center text-muted py-2">
+          <div class="spinner-border spinner-border-sm me-1"></div>กำลังโหลด...
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <ul class="nav nav-tabs mb-3" id="mainTab">
+      <li class="nav-item">
+        <button class="nav-link active" id="tab-stock" onclick="switchTab('stock')">
+          <i class="fas fa-exchange-alt me-1"></i>ปริมาณเข้า-ออก
+        </button>
+      </li>
+      <li class="nav-item">
+        <button class="nav-link" id="tab-logs" onclick="switchTab('logs')">
+          <i class="fas fa-history me-1"></i>Log การขายออก
+        </button>
+      </li>
+    </ul>
+
+    <!-- Stock movement tab -->
+    <div id="pane-stock">
+      <!-- Filters + list -->
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <div class="d-flex flex-wrap gap-2 align-items-end filter-row mb-3">
+            <div>
+              <label class="form-label small mb-1">สาขา</label>
+              <select class="form-select form-select-sm" id="filterBranch" style="min-width:110px"
+                onchange="loadHistory()">
+                <option value="">ทุกสาขา</option>
+                <option value="Y5">Y5</option>
+                <option value="Y8">Y8</option>
+                <option value="Y11">Y11</option>
+              </select>
+            </div>
+            <div>
+              <label class="form-label small mb-1">จาก</label>
+              <input type="date" class="form-control form-control-sm" id="filterFrom" onchange="loadHistory()">
+            </div>
+            <div>
+              <label class="form-label small mb-1">ถึง</label>
+              <input type="date" class="form-control form-control-sm" id="filterTo" onchange="loadHistory()">
+            </div>
+            <div>
+              <label class="form-label small mb-1">ประเภท</label>
+              <select class="form-select form-select-sm" id="filterDir" style="min-width:120px"
+                onchange="loadHistory()">
+                <option value="all">ทั้งหมด</option>
+                <option value="in">ทิ้งแล้ว เท่านั้น</option>
+                <option value="out">ขายออก เท่านั้น</option>
+              </select>
+            </div>
+            <button class="btn btn-outline-secondary btn-sm align-self-end" onclick="clearFilter()">
+              <i class="fas fa-times me-1"></i>ล้าง
+            </button>
+          </div>
+          <p class="section-label"><i class="fas fa-list-ul me-1"></i>รายการทั้งหมด</p>
+          <div id="eventList">
+            <div class="text-center text-muted py-4">
+              <div class="spinner-border spinner-border-sm"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div><!-- /pane-stock -->
+
+    <!-- Logs tab -->
+    <div id="pane-logs" class="d-none">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <div class="d-flex flex-wrap gap-2 align-items-end filter-row mb-3">
+            <div>
+              <label class="form-label small mb-1">สาขา</label>
+              <select class="form-select form-select-sm" id="logFilterBranch" style="min-width:110px"
+                onchange="loadLogs()">
+                <option value="">ทุกสาขา</option>
+                <option value="Y5">Y5</option>
+                <option value="Y8">Y8</option>
+                <option value="Y11">Y11</option>
+              </select>
+            </div>
+            <div>
+              <label class="form-label small mb-1">จาก</label>
+              <input type="date" class="form-control form-control-sm" id="logFilterFrom" onchange="loadLogs()">
+            </div>
+            <div>
+              <label class="form-label small mb-1">ถึง</label>
+              <input type="date" class="form-control form-control-sm" id="logFilterTo" onchange="loadLogs()">
+            </div>
+            <button class="btn btn-outline-secondary btn-sm align-self-end" onclick="clearLogFilter()">
+              <i class="fas fa-times me-1"></i>ล้าง
+            </button>
+          </div>
+          <p class="section-label"><i class="fas fa-history me-1"></i>Log การขายออก / ยกเลิก</p>
+          <div id="logList">
+            <div class="text-center text-muted py-4">
+              <div class="spinner-border spinner-border-sm"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div><!-- /pane-logs -->
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/nav-unified.js"></script>
+  <script>
+    const GROUP_LABEL = { thin: 'เหล็กบาง', thick: 'เหล็กหนา', special: 'เหล็กหนาพิเศษ' };
+    const GROUP_CLS = { thin: 'tbadge-thin', thick: 'tbadge-thick', special: 'tbadge-special' };
+
+    let allEvents = [];
+    let _userRole = '';
+    let _userBranch = '';
+
+    function esc(s) {
+      return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    // ── Auth ─────────────────────────────────────────────────────────────────────
+    (async () => {
+      try {
+        const res = await fetch('/api/auth/me');
+        if (!res.ok) { window.location.replace('/login.html'); return; }
+        const u = await res.json();
+        if (!['approver', 'managerial', 'superadmin'].includes(u.role)) {
+          window.location.replace('/login.html'); return;
+        }
+        _userRole = u.role;
+        _userBranch = (u.branch || '').trim();
+        document.getElementById('userInfo').textContent = `${u.fullName} (${u.branch || u.role})`;
+
+        // Show correct back-nav button
+        if (u.role === 'approver') document.getElementById('btnApprove').classList.remove('d-none');
+        if (u.role === 'managerial') document.getElementById('btnManagerial').classList.remove('d-none');
+
+        // Lock log branch filter too
+        if (_userBranch && u.role === 'managerial') {
+          const sel = document.getElementById('filterBranch');
+          sel.value = _userBranch;
+          sel.disabled = true;
+          const logSel = document.getElementById('logFilterBranch');
+          logSel.value = _userBranch;
+          logSel.disabled = true;
+        }
+
+        loadHistory();
+      } catch {
+        window.location.replace('/login.html');
+      }
+    })();
+
+    async function logout() {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      window.location.replace('/login.html');
+    }
+
+    // ── Tab switch ────────────────────────────────────────────────────────────────
+    function switchTab(tab) {
+      document.getElementById('pane-stock').classList.toggle('d-none', tab !== 'stock');
+      document.getElementById('pane-logs').classList.toggle('d-none', tab !== 'logs');
+      document.getElementById('tab-stock').classList.toggle('active', tab === 'stock');
+      document.getElementById('tab-logs').classList.toggle('active', tab === 'logs');
+      if (tab === 'logs') loadLogs();
+    }
+
+    // ── Load Logs ─────────────────────────────────────────────────────────────────
+    async function loadLogs() {
+      const params = new URLSearchParams();
+      const branch = document.getElementById('logFilterBranch').value;
+      const from = document.getElementById('logFilterFrom').value;
+      const to = document.getElementById('logFilterTo').value;
+      if (branch) params.set('branch', branch);
+      if (from) params.set('dateFrom', from);
+      if (to) params.set('dateTo', to);
+
+      document.getElementById('logList').innerHTML =
+        '<div class="text-center text-muted py-4"><div class="spinner-border spinner-border-sm"></div></div>';
+      try {
+        const res = await fetch('/api/sale-logs?' + params.toString());
+        const logs = await res.json();
+        renderLogs(logs);
+      } catch {
+        document.getElementById('logList').innerHTML =
+          '<div class="alert alert-danger py-2 small">โหลดข้อมูลไม่สำเร็จ</div>';
+      }
+    }
+
+    function clearLogFilter() {
+      document.getElementById('logFilterFrom').value = '';
+      document.getElementById('logFilterTo').value = '';
+      if (!_userBranch) document.getElementById('logFilterBranch').value = '';
+      loadLogs();
+    }
+
+    function renderLogs(list) {
+      const el = document.getElementById('logList');
+      if (list.length === 0) {
+        el.innerHTML = '<div class="text-center text-muted py-4"><i class="fas fa-inbox fa-2x mb-2 d-block"></i>ยังไม่มี Log</div>';
+        return;
+      }
+      const fmt = w => Number(w || 0).toLocaleString('th-TH', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+      const rows = list.map(log => {
+        const isCreate = log.action === 'create';
+        const actionBadge = isCreate
+          ? `<span class="badge log-create"><i class="fas fa-plus me-1"></i>บันทึกขายออก</span>`
+          : `<span class="badge log-cancel"><i class="fas fa-trash-alt me-1"></i>ยกเลิกการขาย</span>`;
+        const grp = log.scrapType || 'thin';
+        const typeBadge = `<span class="badge rounded-pill px-2 small ${GROUP_CLS[grp]}" style="font-size:.7rem">${GROUP_LABEL[grp] || grp}</span>`;
+        const branchBadge = log.branch ? `<span class="badge bg-secondary rounded-pill px-2 small" style="font-size:.7rem">${esc(log.branch)}</span>` : '';
+        const dateStr = log.createdAt ? new Date(log.createdAt).toLocaleString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '–';
+        const saleDateStr = (() => { const [y, m, d] = (log.saleDate || '').split('-'); return y ? `${d}/${m}/${y}` : ''; })();
+        return `
+      <div class="event-row">
+        <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
+          <div style="min-width:0;flex:1">
+            <div class="d-flex flex-wrap gap-1 align-items-center mb-1">
+              ${actionBadge}
+              ${branchBadge}
+              ${typeBadge}
+              ${saleDateStr ? `<span class="small text-muted">วันขาย: ${saleDateStr}</span>` : ''}
+            </div>
+            <div class="small text-muted">
+              <i class="fas fa-user me-1"></i>${esc(log.actor)}
+              ${log.notes ? ` &nbsp;<i class="fas fa-comment me-1"></i>${esc(log.notes)}` : ''}
+              &nbsp;<i class="fas fa-clock me-1"></i>${dateStr}
+            </div>
+          </div>
+          <div class="text-end flex-shrink-0">
+            <div class="fw-bold ${isCreate ? 'text-danger' : 'text-secondary'}" style="font-size:.95rem">
+              ${isCreate ? '−' : ''}${fmt(log.weightKg)} กก.
+            </div>
+          </div>
+        </div>
+      </div>`;
+      }).join('');
+      el.innerHTML = `<div class="border rounded">${rows}</div>`;
+    }
+
+    // ── Tab switch ────────────────────────────────────────────────────────────────
+    function switchTab(tab) {
+      document.getElementById('pane-stock').classList.toggle('d-none', tab !== 'stock');
+      document.getElementById('pane-logs').classList.toggle('d-none', tab !== 'logs');
+      document.getElementById('tab-stock').classList.toggle('active', tab === 'stock');
+      document.getElementById('tab-logs').classList.toggle('active', tab === 'logs');
+      if (tab === 'logs') loadLogs();
+    }
+
+    // ── Load Logs ─────────────────────────────────────────────────────────────────
+    async function loadLogs() {
+      const params = new URLSearchParams();
+      const branch = document.getElementById('logFilterBranch').value;
+      const from = document.getElementById('logFilterFrom').value;
+      const to = document.getElementById('logFilterTo').value;
+      if (branch) params.set('branch', branch);
+      if (from) params.set('dateFrom', from);
+      if (to) params.set('dateTo', to);
+
+      document.getElementById('logList').innerHTML =
+        '<div class="text-center text-muted py-4"><div class="spinner-border spinner-border-sm"></div></div>';
+      try {
+        const res = await fetch('/api/sale-logs?' + params.toString());
+        const logs = await res.json();
+        renderLogs(logs);
+      } catch {
+        document.getElementById('logList').innerHTML =
+          '<div class="alert alert-danger py-2 small">โหลดข้อมูลไม่สำเร็จ</div>';
+      }
+    }
+
+    function clearLogFilter() {
+      document.getElementById('logFilterFrom').value = '';
+      document.getElementById('logFilterTo').value = '';
+      if (!_userBranch) document.getElementById('logFilterBranch').value = '';
+      loadLogs();
+    }
+
+    function renderLogs(list) {
+      const el = document.getElementById('logList');
+      if (list.length === 0) {
+        el.innerHTML = '<div class="text-center text-muted py-4"><i class="fas fa-inbox fa-2x mb-2 d-block"></i>ยังไม่มี Log</div>';
+        return;
+      }
+      const fmt = w => Number(w || 0).toLocaleString('th-TH', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+      const rows = list.map(log => {
+        const isCreate = log.action === 'create';
+        const actionBadge = isCreate
+          ? `<span class="badge log-create"><i class="fas fa-plus me-1"></i>บันทึกขายออก</span>`
+          : `<span class="badge log-cancel"><i class="fas fa-trash-alt me-1"></i>ยกเลิกการขาย</span>`;
+        const grp = log.scrapType || 'thin';
+        const typeBadge = `<span class="badge rounded-pill px-2 small ${GROUP_CLS[grp]}" style="font-size:.7rem">${GROUP_LABEL[grp] || grp}</span>`;
+        const branchBadge = log.branch ? `<span class="badge bg-secondary rounded-pill px-2 small" style="font-size:.7rem">${esc(log.branch)}</span>` : '';
+        const dateStr = log.createdAt ? new Date(log.createdAt).toLocaleString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '–';
+        const saleDateStr = (() => { const [y, m, d] = (log.saleDate || '').split('-'); return y ? `${d}/${m}/${y}` : ''; })();
+        return `
+      <div class="event-row">
+        <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
+          <div style="min-width:0;flex:1">
+            <div class="d-flex flex-wrap gap-1 align-items-center mb-1">
+              ${actionBadge}
+              ${branchBadge}
+              ${typeBadge}
+              ${saleDateStr ? `<span class="small text-muted">วันที่ขาย: ${saleDateStr}</span>` : ''}
+            </div>
+            <div class="small text-muted">
+              <i class="fas fa-user me-1"></i>${esc(log.actor)}
+              ${!isCreate && log.cancelReason ? ` &nbsp;<span class="badge bg-warning text-dark" style="font-size:.7rem"><i class="fas fa-exclamation-circle me-1"></i>${esc(log.cancelReason)}</span>` : ''}
+              ${log.notes ? ` &nbsp;<i class="fas fa-comment me-1"></i>${esc(log.notes)}` : ''}
+              &nbsp;<i class="fas fa-clock me-1"></i>${dateStr}
+            </div>
+          </div>
+          <div class="text-end flex-shrink-0">
+            <div class="fw-bold ${isCreate ? 'text-danger' : 'text-secondary'}" style="font-size:.95rem">
+              ${isCreate ? '−' : ''}${fmt(log.weightKg)} กก.
+            </div>
+          </div>
+        </div>
+      </div>`;
+      }).join('');
+      el.innerHTML = `<div class="border rounded">${rows}</div>`;
+    }
+
+    // ── Load ──────────────────────────────────────────────────────────────────────
+    async function loadHistory() {
+      const params = new URLSearchParams();
+      const branch = document.getElementById('filterBranch').value;
+      const from = document.getElementById('filterFrom').value;
+      const to = document.getElementById('filterTo').value;
+      const dir = document.getElementById('filterDir').value;
+      if (branch) params.set('branch', branch);
+      if (from) params.set('dateFrom', from);
+      if (to) params.set('dateTo', to);
+      if (dir && dir !== 'all') params.set('direction', dir);
+
+      document.getElementById('eventList').innerHTML =
+        '<div class="text-center text-muted py-4"><div class="spinner-border spinner-border-sm"></div></div>';
+      try {
+        const res = await fetch('/api/stock-history?' + params.toString());
+        allEvents = await res.json();
+        renderKPI(allEvents);
+        renderList(allEvents);
+      } catch {
+        document.getElementById('eventList').innerHTML =
+          '<div class="alert alert-danger py-2 small">โหลดข้อมูลไม่สำเร็จ</div>';
+      }
+    }
+
+    function clearFilter() {
+      document.getElementById('filterFrom').value = '';
+      document.getElementById('filterTo').value = '';
+      document.getElementById('filterDir').value = 'all';
+      if (!_userBranch) document.getElementById('filterBranch').value = '';
+      loadHistory();
+    }
+
+    // ── KPI ────────────────────────────────────────────────────────────────────────
+    function renderKPI(list) {
+      const fmt = w => Number(w || 0).toLocaleString('th-TH', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+
+      const ins = list.filter(e => e.direction === 'in');
+      const outs = list.filter(e => e.direction === 'out');
+
+      const sumGrp = (arr, g) => arr.reduce((s, e) => s + (e.weightByGroup?.[g] || 0), 0);
+
+      const inTotal = ins.reduce((s, e) => s + e.totalWeight, 0);
+      const outTotal = outs.reduce((s, e) => s + e.totalWeight, 0);
+      const net = inTotal - outTotal;
+      const netCol = net >= 0 ? '#065f46' : '#991b1b';
+      const netBg = net >= 0 ? '#d1fae5' : '#fee2e2';
+
+      const rows = [
+        { label: 'เหล็กบาง', grp: 'thin', bg: '#dbeafe', col: '#1e40af' },
+        { label: 'เหล็กหนา', grp: 'thick', bg: '#ffedd5', col: '#7c2d12' },
+        { label: 'หนาพิเศษ', grp: 'special', bg: '#fce7f3', col: '#831843' },
+      ].map(({ label, grp, bg, col }) => {
+        const i = sumGrp(ins, grp), o = sumGrp(outs, grp), n = i - o;
+        const nc = n >= 0 ? '#065f46' : '#991b1b';
+        return `
+      <div class="col-12 col-sm-4">
+        <div class="kpi-card border" style="background:${bg}">
+          <div class="small fw-semibold mb-1" style="color:${col}">${label}</div>
+          <div class="d-flex justify-content-around small">
+            <div class="text-center">
+              <div class="fw-bold text-success">${fmt(i)}</div>
+              <div class="text-muted" style="font-size:.68rem">ทิ้งแล้ว</div>
+            </div>
+            <div class="text-center">
+              <div class="fw-bold text-danger">${fmt(o)}</div>
+              <div class="text-muted" style="font-size:.68rem">ขายออก</div>
+            </div>
+            <div class="text-center">
+              <div class="fw-bold" style="color:${nc}">${fmt(n)}</div>
+              <div class="text-muted" style="font-size:.68rem">คงเหลือ</div>
+            </div>
+          </div>
+        </div>
+      </div>`;
+      }).join('');
+
+      document.getElementById('kpiSection').innerHTML = `
+    <div class="row g-2 mb-2">
+      <div class="col-6 col-md-3">
+        <div class="kpi-card border" style="background:#d1fae5">
+          <div class="kpi-num text-success">${ins.length.toLocaleString()}</div>
+          <div class="kpi-label"><i class="fas fa-arrow-down me-1 text-success"></i>รายการทิ้งแล้ว</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="kpi-card border" style="background:#fee2e2">
+          <div class="kpi-num text-danger">${outs.length.toLocaleString()}</div>
+          <div class="kpi-label"><i class="fas fa-arrow-up me-1 text-danger"></i>รายการขายออก</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="kpi-card border" style="background:#f8f9fa">
+          <div class="kpi-num text-dark">${fmt(inTotal)}</div>
+          <div class="kpi-label"><i class="fas fa-weight-hanging me-1"></i>ทิ้งแล้วรวม (กก.)</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="kpi-card border" style="background:${netBg}">
+          <div class="kpi-num" style="color:${netCol}">${fmt(net)}</div>
+          <div class="kpi-label" style="color:${netCol}"><i class="fas fa-warehouse me-1"></i>คงเหลือสุทธิ (กก.)</div>
+        </div>
+      </div>
+    </div>
+    <div class="row g-2">${rows}</div>`;
+    }
+
+    // ── List ───────────────────────────────────────────────────────────────────────
+    function renderList(list) {
+      const el = document.getElementById('eventList');
+      if (list.length === 0) {
+        el.innerHTML = '<div class="text-center text-muted py-4"><i class="fas fa-inbox fa-2x mb-2 d-block"></i>ไม่มีรายการ</div>';
+        return;
+      }
+      const fmt = w => Number(w || 0).toLocaleString('th-TH', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+
+      const rows = list.map(e => {
+        const [y, m, d] = (e.date || '').split('-');
+        const dateStr = y ? `${d}/${m}/${y}` : '–';
+        const isIn = e.direction === 'in';
+        const dirBadge = isIn
+          ? `<span class="badge dir-in"><i class="fas fa-arrow-down me-1"></i>ทิ้งแล้ว</span>`
+          : `<span class="badge dir-out"><i class="fas fa-arrow-up me-1"></i>ขายออก</span>`;
+
+        // Type group badges
+        let typeParts = [];
+        if (isIn) {
+          for (const g of ['thin', 'thick', 'special']) {
+            const w = e.weightByGroup?.[g] || 0;
+            if (w > 0) typeParts.push(`<span class="badge rounded-pill px-2 small ${GROUP_CLS[g]}" style="font-size:.7rem">${GROUP_LABEL[g]} ${fmt(w)} กก.</span>`);
+          }
+        } else {
+          const g = e.scrapType || 'thin';
+          typeParts.push(`<span class="badge rounded-pill px-2 small ${GROUP_CLS[g]}" style="font-size:.7rem">${GROUP_LABEL[g]}</span>`);
+        }
+
+        const meta = isIn
+          ? `<i class="fas fa-user me-1"></i>${esc(e.collectorName)}${e.approvedBy ? ` &nbsp;<i class="fas fa-check-circle me-1 text-success"></i>${esc(e.approvedBy)}` : ''}${e.location ? ` &nbsp;<i class="fas fa-map-marker-alt me-1 text-muted"></i>${esc(e.location)}` : ''}`
+          : `<i class="fas fa-user me-1"></i>${esc(e.recordedBy)}${e.notes ? ` &nbsp;<i class="fas fa-comment me-1"></i>${esc(e.notes)}` : ''}`;
+
+        const weightColor = isIn ? 'text-success' : 'text-danger';
+        const weightSign = isIn ? '+' : '−';
+
+        const branchBadge = e.branch ? `<span class="badge bg-secondary rounded-pill px-2 small" style="font-size:.7rem">${esc(e.branch)}</span>` : '';
+
+        return `
+      <div class="event-row">
+        <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
+          <div style="min-width:0;flex:1">
+            <div class="d-flex flex-wrap gap-1 align-items-center mb-1">
+              <span class="small fw-semibold">${dateStr}</span>
+              ${dirBadge}
+              ${branchBadge}
+              ${typeParts.join(' ')}
+            </div>
+            <div class="small text-muted">${meta}</div>
+          </div>
+          <div class="text-end flex-shrink-0">
+            <div class="fw-bold ${weightColor}" style="font-size:.95rem">${weightSign}${fmt(e.totalWeight)} กก.</div>
+          </div>
+        </div>
+      </div>`;
+      }).join('');
+
+      el.innerHTML = `<div class="border rounded">${rows}</div>`;
+    }
+  </script>
+</body>
+
+</html>

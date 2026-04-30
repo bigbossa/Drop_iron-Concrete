@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>บันทึกการขายเศษเหล็ก — Iron Drop</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="/nav-unified.css" rel="stylesheet">
+    <style>
+        body {
+            background: #eef2f7;
+            font-family: 'Prompt', sans-serif;
+        }
+
+        .page-header {
+            background: linear-gradient(135deg, #7c2d12, #c2410c);
+            color: #fff;
+            padding: 1.25rem 1.5rem;
+            border-radius: 10px 10px 0 0;
+        }
+
+        .section-label {
+            font-weight: 700;
+            color: #7c2d12;
+            border-left: 4px solid #c2410c;
+            padding-left: .6rem;
+            margin-bottom: .75rem;
+        }
+
+        /* KPI */
+        .kpi-card {
+            border-radius: 10px;
+            padding: 1rem;
+            text-align: center;
+        }
+
+        .kpi-num {
+            font-size: 1.8rem;
+            font-weight: 700;
+            line-height: 1.1;
+        }
+
+        .kpi-label {
+            font-size: .78rem;
+            color: #6c757d;
+            margin-top: .15rem;
+        }
+
+        /* Sale row */
+        .sale-row {
+            padding: .6rem .85rem;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .sale-row:last-child {
+            border-bottom: none;
+        }
+
+        .sale-row:hover {
+            background: #fff5f0;
+        }
+
+        /* type badge colours */
+        .tbadge-thin {
+            background: #e7f3ff;
+            color: #084298;
+            border: 1px solid #b6d4fe;
+        }
+
+        .tbadge-thick {
+            background: #fff3e0;
+            color: #7c4d00;
+            border: 1px solid #ffc107;
+        }
+
+        .tbadge-special {
+            background: #fce4ec;
+            color: #880e4f;
+            border: 1px solid #f48fb1;
+        }
+
+        @media (max-width: 575px) {
+            body {
+                background: #fff;
+            }
+
+            .container-lg {
+                padding-left: .5rem;
+                padding-right: .5rem;
+            }
+
+            .py-4 {
+                padding-top: .75rem !important;
+                padding-bottom: .75rem !important;
+            }
+
+            .card.shadow-sm {
+                box-shadow: none !important;
+            }
+
+            .card {
+                border-radius: 0 !important;
+                border-left: none !important;
+                border-right: none !important;
+            }
+
+            .page-header {
+                border-radius: 0;
+                padding: .85rem 1rem;
+            }
+
+            .page-header h5 {
+                font-size: .95rem;
+            }
+
+            .card-body {
+                padding: .75rem;
+            }
+
+            .hdr-actions .btn-label {
+                display: none;
+            }
+
+            .hdr-actions .btn {
+                padding: .3rem .55rem;
+            }
+
+            #userInfo {
+                max-width: 80px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                display: inline-block;
+                vertical-align: middle;
+            }
+
+            .kpi-num {
+                font-size: 1.4rem !important;
+            }
+
+            .filter-row {
+                flex-direction: column !important;
+            }
+
+            .filter-row>* {
+                width: 100% !important;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Auth guard -->
+    <script>
+        let _branch = '';
+        (async () => {
+            try {
+                const r = await fetch('/api/auth/me');
+                if (!r.ok) { window.location.replace('/login.html'); return; }
+                const u = await r.json();
+                if (!['managerial', 'superadmin'].includes(u.role)) { window.location.replace('/login.html'); return; }
+                document.getElementById('userInfo').textContent = `${u.fullName} (${u.employeeId})`;
+                _branch = (u.branch || '').trim();
+                // Lock branch selects
+                const branchSels = document.querySelectorAll('.branch-sel');
+                branchSels.forEach(sel => {
+                    if (_branch) { sel.value = _branch; sel.disabled = true; }
+                });
+                loadSales();
+            } catch { window.location.replace('/login.html'); }
+        })();
+        async function logout() {
+            await fetch('/api/auth/logout', { method: 'POST' });
+            window.location.replace('/login.html');
+        }
+    </script>
+
+    <div class="container-lg py-4">
+
+        <!-- Header -->
+        <div class="card shadow-sm mb-4">
+            <div class="page-header app-topbar">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 app-topbar-inner py-1">
+                    <div>
+                        <h5 class="mb-0"><i class="fas fa-coins me-2"></i>บันทึกการขายเศษเหล็กออก</h5>
+                        <small class="opacity-75">บันทึกน้ำหนักและราคาเศษเหล็กที่ขายออกแต่ละครั้ง</small>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 hdr-actions flex-wrap app-nav-actions">
+                        <span class="app-page-chip"><i class="fas fa-coins"></i>หน้าขายออก</span>
+                        <a href="/managerial.html" class="btn btn-outline-light btn-sm app-nav-btn" title="รายงานเศษที่ทิ้งแล้ว">
+                            <i class="fas fa-recycle"></i><span class="btn-label ms-1">รายงานทิ้ง</span>
+                        </a>
+                        <a href="/history.html" class="btn btn-outline-light btn-sm app-nav-btn" title="ประวัติเข้า-ออกเหล็ก">
+                            <i class="fas fa-exchange-alt"></i><span class="btn-label ms-1">ประวัติ</span>
+                        </a>
+                        <span class="app-user-chip" id="userInfo"><i class="fas fa-user-tie"></i>กำลังโหลด...</span>
+                        <button class="btn btn-outline-light btn-sm app-nav-btn" onclick="logout()" title="ออกจากระบบ">
+                            <i class="fas fa-sign-out-alt"></i><span class="btn-label ms-1">ออกจากระบบ</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- KPI -->
+            <div class="card-body border-bottom" id="kpiSection">
+                <div class="text-center text-muted py-2">
+                    <div class="spinner-border spinner-border-sm me-1"></div>กำลังโหลด...
+                </div>
+            </div>
+        </div>
+
+        <!-- Add form + list side by side on desktop -->
+        <div class="row g-3">
+
+            <!-- Add Sale Form -->
+            <div class="col-lg-4">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <p class="section-label"><i class="fas fa-plus-circle me-1"></i>บันทึกการขาย</p>
+                        <div id="formAlert" class="alert alert-danger py-2 small d-none"></div>
+                        <div class="mb-2">
+                            <label class="form-label small fw-semibold mb-1">สาขา <span
+                                    class="text-danger">*</span></label>
+                            <select class="form-select form-select-sm branch-sel" id="fBranch">
+                                <option value="">— เลือกสาขา —</option>
+                                <option value="Y5">Y5</option>
+                                <option value="Y8">Y8</option>
+                                <option value="Y11">Y11</option>
+                            </select>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label small fw-semibold mb-1">วันที่ขาย <span
+                                    class="text-danger">*</span></label>
+                            <input type="date" class="form-control form-control-sm" id="fDate">
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label small fw-semibold mb-1">ประเภทเหล็ก <span
+                                    class="text-danger">*</span></label>
+                            <select class="form-select form-select-sm" id="fScrapType">
+                                <option value="">— เลือกประเภท —</option>
+                                <option value="thin">เหล็กบาง</option>
+                                <option value="thick">เหล็กหนา</option>
+                                <option value="special">เหล็กหนาพิเศษ</option>
+                            </select>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label small fw-semibold mb-1">น้ำหนัก (กก.) <span
+                                    class="text-danger">*</span></label>
+                            <input type="number" class="form-control form-control-sm" id="fWeight" min="0.01"
+                                step="0.01" placeholder="เช่น 150.5">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold mb-1">หมายเหตุ</label>
+                            <textarea class="form-control form-control-sm" id="fNotes" rows="2" maxlength="500"
+                                placeholder="ไม่จำเป็น"></textarea>
+                        </div>
+                        <button class="btn btn-danger w-100" onclick="addSale()">
+                            <i class="fas fa-save me-2"></i>บันทึกและส่ง Approver
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sales list -->
+            <div class="col-lg-8">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+                            <p class="section-label mb-0"><i class="fas fa-history me-1"></i>ประวัติการขาย</p>
+                            <div class="d-flex gap-2 flex-wrap align-items-center filter-row">
+                                <input type="date" class="form-control form-control-sm" id="filterFrom"
+                                    style="width:auto" onchange="loadSales()">
+                                <span class="small text-muted">ถึง</span>
+                                <input type="date" class="form-control form-control-sm" id="filterTo" style="width:auto"
+                                    onchange="loadSales()">
+                                <button class="btn btn-outline-secondary btn-sm" onclick="clearFilter()">
+                                    <i class="fas fa-times me-1"></i>ล้าง
+                                </button>
+                            </div>
+                        </div>
+                        <div id="salesList">
+                            <div class="text-center text-muted py-3">
+                                <div class="spinner-border spinner-border-sm"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Delete confirm modal -->
+    <div class="modal fade" id="delModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title"><i class="fas fa-trash-alt me-2"></i>ยืนยันการยกเลิก</h5>
+                    <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-2">ต้องการยกเลิกรายการขายนี้ใช่หรือไม่?</p>
+                    <label class="form-label small fw-semibold mb-1">เหตุผลที่ยกเลิก <span
+                            class="text-danger">*</span></label>
+                    <textarea class="form-control form-control-sm" id="cancelReason" rows="2" maxlength="300"
+                        placeholder="ระบุเหตุผล..."></textarea>
+                    <div id="cancelReasonErr" class="text-danger small mt-1 d-none">กรุณาระบุเหตุผล</div>
+                    <div class="alert alert-warning py-1 small mt-2 mb-0">รายการจะถูกลบ</div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button class="btn btn-danger btn-sm" onclick="confirmDelete()">
+                        <i class="fas fa-trash-alt me-1"></i>ยืนยันยกเลิก
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/nav-unified.js"></script>
+    <script>
+        const TYPE_LABELS = {
+            thin_1: 'เศษลวดหัวแบ่ง',
+            thin_2: 'สายแพ็คเหล็ก',
+            thin_3: 'เศษลวดปลอก',
+            thin_4: 'ลวดผูกเหล็กรัดลวดปลอก',
+            thick_1: 'เศษเหล็กโดเวล',
+            thick_2: 'เหล็กรูปพรรณเศษชิ้นส่วนเครื่องจักร/เศษเหล็กเพลท',
+            special_1: 'เศษเหล็กแผ่นจากการตัดเพลทเครื่องตัดพลาสม่า',
+            thin: 'เหล็กบาง',
+            thick: 'เหล็กหนา',
+            special: 'เหล็กหนาพิเศษ',
+        };
+        const TYPE_GROUP = {
+            thin_1: 'thin',
+            thin_2: 'thin',
+            thin_3: 'thin',
+            thin_4: 'thin',
+            thick_1: 'thick',
+            thick_2: 'thick',
+            special_1: 'special',
+            thin: 'thin',
+            thick: 'thick',
+            special: 'special',
+        };
+        const GROUP_BADGE_CLS = { thin: 'tbadge-thin', thick: 'tbadge-thick', special: 'tbadge-special' };
+        const SALE_STATUS_TH = {
+            pending_approval: 'รอ Approver อนุมัติ',
+            approved_by_approver: 'Approver อนุมัติแล้ว',
+            rejected_by_approver: 'Approver ปฏิเสธ',
+            confirmed_by_managerial: 'Managerial ยืนยันแล้ว',
+        };
+        const SALE_STATUS_BADGE = {
+            pending_approval: 'bg-warning text-dark',
+            approved_by_approver: 'bg-primary',
+            rejected_by_approver: 'bg-danger',
+            confirmed_by_managerial: 'bg-success',
+        };
+
+        let allSales = [];
+        let deleteTargetId = null;
+
+        // ── Set today's date as default ──────────────────────────────────────────────
+        document.getElementById('fDate').value = new Date().toISOString().split('T')[0];
+
+        // ── Calc total on price/weight change ────────────────────────────────────────
+        function calcTotal() {
+            const w = parseFloat(document.getElementById('fWeight').value) || 0;
+            const p = parseFloat(document.getElementById('fPricePerKg').value) || 0;
+            const el = document.getElementById('fTotal');
+            if (w > 0 && p > 0) {
+                el.value = (w * p).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            } else {
+                el.value = '';
+            }
+        }
+
+        // ── Load sales list ───────────────────────────────────────────────────────────
+        async function loadSales() {
+            const params = new URLSearchParams();
+            if (_branch) params.set('branch', _branch);
+            const from = document.getElementById('filterFrom').value;
+            const to = document.getElementById('filterTo').value;
+            if (from) params.set('dateFrom', from);
+            if (to) params.set('dateTo', to);
+
+            document.getElementById('salesList').innerHTML =
+                '<div class="text-center text-muted py-3"><div class="spinner-border spinner-border-sm"></div></div>';
+            try {
+                const rptParams = new URLSearchParams();
+                if (_branch) rptParams.set('branch', _branch);
+                if (from) rptParams.set('dateFrom', from);
+                if (to) rptParams.set('dateTo', to);
+
+                const [resSales, resRpt] = await Promise.all([
+                    fetch('/api/sales?' + params.toString()),
+                    fetch('/api/managerial/report?' + rptParams.toString())
+                ]);
+                allSales = await resSales.json();
+                const rpt = resRpt.ok ? await resRpt.json() : null;
+                renderKPI(allSales, rpt);
+                renderList(allSales);
+            } catch {
+                document.getElementById('salesList').innerHTML =
+                    '<div class="alert alert-danger py-2 small">โหลดข้อมูลไม่สำเร็จ</div>';
+            }
+        }
+
+        function clearFilter() {
+            document.getElementById('filterFrom').value = '';
+            document.getElementById('filterTo').value = '';
+            loadSales();
+        }
+
+        // ── KPI ────────────────────────────────────────────────────────────────────────
+        function renderKPI(list, rpt) {
+            const confirmed = list.filter(r => r.status === 'confirmed_by_managerial');
+            const pendingCount = list.filter(r => r.status === 'pending_approval').length;
+            const approvedCount = list.filter(r => r.status === 'approved_by_approver').length;
+
+            const totalW = confirmed.reduce((s, r) => s + (r.weightKg || 0), 0);
+            const totalP = confirmed.filter(r => r.totalPrice).reduce((s, r) => s + (r.totalPrice || 0), 0);
+            const thin = confirmed.filter(r => TYPE_GROUP[r.scrapType] === 'thin').reduce((s, r) => s + r.weightKg, 0);
+            const thick = confirmed.filter(r => TYPE_GROUP[r.scrapType] === 'thick').reduce((s, r) => s + r.weightKg, 0);
+            const special = confirmed.filter(r => TYPE_GROUP[r.scrapType] === 'special').reduce((s, r) => s + r.weightKg, 0);
+            const fmt = w => Number(w || 0).toLocaleString('th-TH', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+            const fmtP = w => Number(w || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+            // Stock from disposal records (managerial report)
+            const dTotal = rpt ? (rpt.total || 0) : null;
+            const dTotalW = rpt ? ((rpt.weightByGroup?.thin || 0) + (rpt.weightByGroup?.thick || 0) + (rpt.weightByGroup?.special || 0)) : null;
+            const dThin = rpt ? (rpt.weightByGroup?.thin || 0) : null;
+            const dThick = rpt ? (rpt.weightByGroup?.thick || 0) : null;
+            const dSpecial = rpt ? (rpt.weightByGroup?.special || 0) : null;
+
+            const stockRow = rpt ? `
+    <div class="row g-2 mb-1" hidden>
+      <div class="col-12"><div class="small fw-semibold text-muted" style="border-left:3px solid #1a5c3a;padding-left:.5rem">คลังจากการทิ้ง (Completed)</div></div>
+      <div class="col-6 col-md-2">
+        <div class="kpi-card border" style="background:#f0fdf4">
+          <div class="kpi-num" style="color:#1a5c3a">${Number(dTotal).toLocaleString()}</div>
+          <div class="kpi-label"><i class="fas fa-boxes me-1" style="color:#1a5c3a"></i>รายการทิ้ง</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-2">
+        <div class="kpi-card border" style="background:#f0fdf4">
+          <div class="kpi-num" style="color:#1a5c3a">${fmt(dTotalW)}</div>
+          <div class="kpi-label"><i class="fas fa-weight-hanging me-1" style="color:#1a5c3a"></i>รวม (กก.)</div>
+        </div>
+      </div>
+      <div class="col-4 col-md-2">
+        <div class="kpi-card border" style="background:#e7f3ff">
+          <div class="kpi-num" style="color:#084298">${fmt(dThin)}</div>
+          <div class="kpi-label" style="color:#084298">เหล็กบาง (กก.)</div>
+        </div>
+      </div>
+      <div class="col-4 col-md-2">
+        <div class="kpi-card border" style="background:#fff3e0">
+          <div class="kpi-num" style="color:#7c4d00">${fmt(dThick)}</div>
+          <div class="kpi-label" style="color:#7c4d00">เหล็กหนา (กก.)</div>
+        </div>
+      </div>
+      <div class="col-4 col-md-2">
+        <div class="kpi-card border" style="background:#fce4ec">
+          <div class="kpi-num" style="color:#880e4f">${fmt(dSpecial)}</div>
+          <div class="kpi-label" style="color:#880e4f">หนาพิเศษ (กก.)</div>
+        </div>
+      </div>
+    </div>
+    <hr class="my-2">
+    <div class="row g-2 mb-1">
+      <div class="col-12"><div class="small fw-semibold text-muted" style="border-left:3px solid #c2410c;padding-left:.5rem">ขายออกแล้ว</div></div>` : `<div class="row g-2">`;
+
+            const sellRow = `
+      <div class="col-6 col-md-2">
+        <div class="kpi-card border" style="background:#fff5f0">
+                    <div class="kpi-num text-danger">${confirmed.length.toLocaleString()}</div>
+                    <div class="kpi-label"><i class="fas fa-check-circle me-1 text-success"></i>ยืนยันขายแล้ว</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-2">
+        <div class="kpi-card border" style="background:#f8f9fa">
+          <div class="kpi-num text-dark">${fmt(totalW)}</div>
+                    <div class="kpi-label"><i class="fas fa-weight-hanging me-1"></i>น้ำหนักที่ยืนยันแล้ว (กก.)</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-2">
+                <div class="kpi-card border" style="background:#fff9db">
+                    <div class="kpi-num" style="color:#997404">${pendingCount.toLocaleString()}</div>
+                    <div class="kpi-label" style="color:#997404">รอ Approver</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-2">
+                <div class="kpi-card border" style="background:#e7f3ff">
+                    <div class="kpi-num" style="color:#084298">${approvedCount.toLocaleString()}</div>
+                    <div class="kpi-label" style="color:#084298">รอ Managerial ยืนยัน</div>
+        </div>
+      </div>
+            <div class="col-4 col-md-1">
+        <div class="kpi-card border" style="background:#e7f3ff">
+          <div class="kpi-num" style="color:#084298">${fmt(thin)}</div>
+          <div class="kpi-label" style="color:#084298">เหล็กบาง (กก.)</div>
+        </div>
+      </div>
+            <div class="col-4 col-md-1">
+        <div class="kpi-card border" style="background:#fff3e0">
+          <div class="kpi-num" style="color:#7c4d00">${fmt(thick)}</div>
+          <div class="kpi-label" style="color:#7c4d00">เหล็กหนา (กก.)</div>
+        </div>
+      </div>
+            <div class="col-4 col-md-1">
+        <div class="kpi-card border" style="background:#fce4ec">
+          <div class="kpi-num" style="color:#880e4f">${fmt(special)}</div>
+          <div class="kpi-label" style="color:#880e4f">หนาพิเศษ (กก.)</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-2" hidden>
+        <div class="kpi-card border" style="background:#f0fdf4">
+          <div class="kpi-num text-success" style="font-size:1.4rem">${fmtP(totalP)}</div>
+          <div class="kpi-label"><i class="fas fa-baht-sign me-1 text-success"></i>รวมมูลค่า (บาท)</div>
+        </div>
+      </div>
+    </div>`;
+
+            // Remaining stock row
+            const remainRow = rpt ? (() => {
+                const rTotalW = (dTotalW || 0) - totalW;
+                const rThin = (dThin || 0) - thin;
+                const rThick = (dThick || 0) - thick;
+                const rSpecial = (dSpecial || 0) - special;
+                const col = v => v < 0 ? 'color:#dc3545' : 'color:#1a5c3a';
+                return `
+    <hr class="my-2">
+    <div class="row g-2 mb-1">
+      <div class="col-12"><div class="small fw-semibold text-muted" style="border-left:3px solid #6366f1;padding-left:.5rem">คงเหลือในคลัง</div></div>
+      <div class="col-6 col-md-3">
+        <div class="kpi-card border" style="background:#f5f3ff">
+          <div class="kpi-num" style="${col(rTotalW)}">${fmt(rTotalW)}</div>
+          <div class="kpi-label" style="color:#6366f1"><i class="fas fa-warehouse me-1"></i>รวม (กก.)</div>
+        </div>
+      </div>
+      <div class="col-4 col-md-3">
+        <div class="kpi-card border" style="background:#e7f3ff">
+          <div class="kpi-num" style="${col(rThin)}">${fmt(rThin)}</div>
+          <div class="kpi-label" style="color:#084298">เหล็กบาง (กก.)</div>
+        </div>
+      </div>
+      <div class="col-4 col-md-3">
+        <div class="kpi-card border" style="background:#fff3e0">
+          <div class="kpi-num" style="${col(rThick)}">${fmt(rThick)}</div>
+          <div class="kpi-label" style="color:#7c4d00">เหล็กหนา (กก.)</div>
+        </div>
+      </div>
+      <div class="col-4 col-md-3">
+        <div class="kpi-card border" style="background:#fce4ec">
+          <div class="kpi-num" style="${col(rSpecial)}">${fmt(rSpecial)}</div>
+          <div class="kpi-label" style="color:#880e4f">หนาพิเศษ (กก.)</div>
+        </div>
+      </div>
+    </div>`;
+            })() : '';
+
+            document.getElementById('kpiSection').innerHTML = stockRow + sellRow + remainRow;
+        }
+
+        // ── List ───────────────────────────────────────────────────────────────────────
+        function renderList(list) {
+            const el = document.getElementById('salesList');
+            if (list.length === 0) {
+                el.innerHTML = '<div class="text-center text-muted py-4"><i class="fas fa-inbox fa-2x mb-2 d-block"></i>ยังไม่มีรายการขาย</div>';
+                return;
+            }
+            const fmt = w => Number(w).toLocaleString('th-TH', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+            const fmtP = w => Number(w).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            const rows = list.map(s => {
+                const [y, m, d] = (s.saleDate || '').split('-');
+                const dateStr = y ? `${d}/${m}/${y}` : '–';
+                const grp = TYPE_GROUP[s.scrapType] || 'thin';
+                const badgeCls = GROUP_BADGE_CLS[grp] || '';
+                return `
+      <div class="sale-row">
+        <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
+          <div style="min-width:0;flex:1">
+            <div class="d-flex flex-wrap gap-1 align-items-center mb-1">
+              <span class="fw-semibold small">${dateStr}</span>
+              <span class="badge rounded-pill px-2 small ${badgeCls}" style="font-size:.72rem">
+                ${esc(TYPE_LABELS[s.scrapType] || s.scrapType)}
+              </span>
+                            <span class="badge ${SALE_STATUS_BADGE[s.status] || 'bg-secondary'}">${esc(SALE_STATUS_TH[s.status] || s.status || '-')}</span>
+              ${s.branch ? `<span class="badge bg-secondary rounded-pill px-2 small" style="font-size:.7rem">${esc(s.branch)}</span>` : ''}
+            </div>
+            <div class="small text-muted">
+              ${s.buyer ? `<i class="fas fa-building me-1"></i>${esc(s.buyer)} &nbsp;` : ''}
+              <i class="fas fa-user me-1"></i>${esc(s.recordedBy)}
+                            ${s.approvedBy ? ` &nbsp;<i class="fas fa-user-check me-1 text-primary"></i>${esc(s.approvedBy)}` : ''}
+                            ${s.confirmedBy ? ` &nbsp;<i class="fas fa-clipboard-check me-1 text-success"></i>${esc(s.confirmedBy)}` : ''}
+                            ${s.rejectionReason ? ` &nbsp;<i class="fas fa-ban me-1 text-danger"></i>${esc(s.rejectionReason)}` : ''}
+              ${s.notes ? ` &nbsp;<i class="fas fa-comment me-1"></i>${esc(s.notes)}` : ''}
+            </div>
+          </div>
+          <div class="text-end flex-shrink-0 d-flex flex-column align-items-end gap-1">
+            <div class="fw-bold text-danger" style="font-size:.95rem">${fmt(s.weightKg)} กก.</div>
+            ${s.totalPrice != null ? `<div class="small text-success fw-semibold">${fmtP(s.totalPrice)} บาท</div>` : ''}
+            ${s.pricePerKg != null ? `<div class="small text-muted">${fmtP(s.pricePerKg)} บ./กก.</div>` : ''}
+                        ${s.status === 'approved_by_approver' ? `<button class="btn btn-success btn-sm" style="padding:.15rem .45rem;font-size:.72rem"
+                            onclick="confirmSale('${s.id}')"><i class="fas fa-check-double"></i></button>` : ''}
+            <button class="btn btn-outline-danger btn-sm" style="padding:.15rem .45rem;font-size:.72rem"
+              onclick="openDelete('${s.id}')"><i class="fas fa-trash-alt"></i></button>
+          </div>
+        </div>
+      </div>`;
+            }).join('');
+            el.innerHTML = `<div class="border rounded">${rows}</div>`;
+        }
+
+        // ── Add sale ──────────────────────────────────────────────────────────────────
+        async function addSale() {
+            const alertEl = document.getElementById('formAlert');
+            alertEl.classList.add('d-none');
+
+            const branch = document.getElementById('fBranch').value;
+            const saleDate = document.getElementById('fDate').value;
+            const scrapType = document.getElementById('fScrapType').value;
+            const weightKg = document.getElementById('fWeight').value;
+            const notes = document.getElementById('fNotes').value.trim();
+
+            if (!branch || !saleDate || !scrapType || !weightKg) {
+                alertEl.textContent = 'กรุณากรอกข้อมูลที่จำเป็นให้ครบ (สาขา / วันที่ / ประเภท / น้ำหนัก)';
+                alertEl.classList.remove('d-none');
+                return;
+            }
+
+            const btn = document.querySelector('button[onclick="addSale()"]');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>กำลังบันทึก...';
+
+            try {
+                const res = await fetch('/api/sales', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ branch, saleDate, scrapType, weightKg, notes }),
+                });
+                const data = await res.json();
+                if (data.success) {
+                    // Reset form (keep branch locked & date today)
+                    document.getElementById('fScrapType').value = '';
+                    document.getElementById('fWeight').value = '';
+                    document.getElementById('fNotes').value = '';
+                    alert('บันทึกสำเร็จ และส่งรายการให้ Approver แล้ว');
+                    await loadSales();
+                } else {
+                    alertEl.textContent = data.error || 'เกิดข้อผิดพลาด';
+                    alertEl.classList.remove('d-none');
+                }
+            } catch {
+                alertEl.textContent = 'ไม่สามารถเชื่อมต่อได้';
+                alertEl.classList.remove('d-none');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-save me-2"></i>บันทึกและส่ง Approver';
+            }
+        }
+
+        async function confirmSale(id) {
+            if (!id) return;
+            if (!confirm('ยืนยันขายรายการนี้หรือไม่? (ต้องผ่าน Approver ก่อน)')) return;
+            try {
+                const res = await fetch(`/api/sales/${id}/confirm`, { method: 'POST' });
+                const data = await res.json();
+                if (data.success) await loadSales();
+                else alert(data.error || 'เกิดข้อผิดพลาด');
+            } catch {
+                alert('ไม่สามารถเชื่อมต่อได้');
+            }
+        }
+
+        // ── Delete ────────────────────────────────────────────────────────────────────
+        function openDelete(id) {
+            deleteTargetId = id;
+            document.getElementById('cancelReason').value = '';
+            document.getElementById('cancelReasonErr').classList.add('d-none');
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('delModal')).show();
+        }
+
+        async function confirmDelete() {
+            if (!deleteTargetId) return;
+            const reason = document.getElementById('cancelReason').value.trim();
+            if (!reason) {
+                document.getElementById('cancelReasonErr').classList.remove('d-none');
+                return;
+            }
+            try {
+                const res = await fetch(`/api/sales/${deleteTargetId}`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ cancelReason: reason }),
+                });
+                const data = await res.json();
+                bootstrap.Modal.getInstance(document.getElementById('delModal')).hide();
+                if (data.success) await loadSales();
+                else alert(data.error || 'เกิดข้อผิดพลาด');
+            } catch { alert('ไม่สามารถเชื่อมต่อได้'); }
+        }
+
+        function esc(str) {
+            return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
+    </script>
+</body>
+
+</html>

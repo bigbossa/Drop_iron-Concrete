@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard — Iron Drop</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="/nav-unified.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+  <style>
+    body {
+      background: #eef2f7;
+      font-family: 'Prompt', sans-serif;
+    }
+
+    .page-header {
+      background: linear-gradient(135deg, #1a3a5c, #2563a8);
+      color: #fff;
+      padding: 1.25rem 1.5rem;
+      border-radius: 10px 10px 0 0;
+    }
+
+    .section-label {
+      font-weight: 700;
+      color: #1a3a5c;
+      border-left: 4px solid #2563a8;
+      padding-left: .6rem;
+      margin-bottom: 1rem;
+    }
+
+    /* KPI cards */
+    .kpi-card {
+      border-radius: 12px;
+      padding: 1.1rem 1.25rem;
+      color: #fff;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .kpi-card .icon-bg {
+      position: absolute;
+      right: -10px;
+      bottom: -10px;
+      font-size: 4rem;
+      opacity: .15;
+    }
+
+    .kpi-card .kpi-num {
+      font-size: 2rem;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .kpi-card .kpi-label {
+      font-size: .82rem;
+      opacity: .85;
+      margin-top: .2rem;
+    }
+
+    .kpi-total {
+      background: linear-gradient(135deg, #2563a8, #1a3a5c);
+    }
+
+    .kpi-pending {
+      background: linear-gradient(135deg, #f59e0b, #b45309);
+    }
+
+    .kpi-approved {
+      background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+    }
+
+    .kpi-rejected {
+      background: linear-gradient(135deg, #ef4444, #991b1b);
+    }
+
+    .kpi-completed {
+      background: linear-gradient(135deg, #10b981, #065f46);
+    }
+
+    .kpi-weight {
+      background: linear-gradient(135deg, #8b5cf6, #4c1d95);
+    }
+
+    /* Status badges */
+    .badge-pending {
+      background: #fff3cd;
+      color: #856404;
+      border: 1px solid #ffc107;
+    }
+
+    .badge-approved {
+      background: #cfe2ff;
+      color: #084298;
+      border: 1px solid #0d6efd;
+    }
+
+    .badge-rejected {
+      background: #f8d7da;
+      color: #58151c;
+      border: 1px solid #dc3545;
+    }
+
+    .badge-completed {
+      background: #d1e7dd;
+      color: #0a3622;
+      border: 1px solid #198754;
+    }
+
+    .chart-wrap {
+      position: relative;
+      height: 240px;
+    }
+
+    .chart-wrap-tall {
+      position: relative;
+      height: 280px;
+    }
+
+    .table-recent td,
+    .table-recent th {
+      font-size: .85rem;
+      vertical-align: middle;
+    }
+
+    .refresh-btn {
+      cursor: pointer;
+    }
+
+    @media (max-width: 575px) {
+      body {
+        background: #fff;
+      }
+
+      .container-lg {
+        padding-left: .5rem;
+        padding-right: .5rem;
+      }
+
+      .py-4 {
+        padding-top: .75rem !important;
+        padding-bottom: .75rem !important;
+      }
+
+      .card.shadow-sm {
+        box-shadow: none !important;
+      }
+
+      .card {
+        border-radius: 0 !important;
+        border-left: none !important;
+        border-right: none !important;
+      }
+
+      .page-header {
+        border-radius: 0;
+        padding: .85rem 1rem;
+      }
+
+      .page-header h5 {
+        font-size: .95rem;
+      }
+
+      .card-body {
+        padding: .75rem;
+      }
+
+      .hdr-actions .btn-label {
+        display: none;
+      }
+
+      .hdr-actions .btn {
+        padding: .3rem .55rem;
+      }
+
+      #userInfo {
+        max-width: 80px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        display: inline-block;
+        vertical-align: middle;
+      }
+
+      .kpi-card .kpi-num {
+        font-size: 1.6rem;
+      }
+
+      .kpi-card {
+        padding: .75rem 1rem;
+      }
+
+      .chart-wrap {
+        height: 200px;
+      }
+
+      .chart-wrap-tall {
+        height: 220px;
+      }
+
+      .mb-4 {
+        margin-bottom: 1rem !important;
+      }
+
+      .section-label {
+        font-size: .88rem;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Auth guard -->
+  <script>
+    let currentUser = null;
+    (async () => {
+      try {
+        const r = await fetch('/api/auth/me');
+        if (!r.ok) { window.location.replace('/login.html'); return; }
+        currentUser = await r.json();
+        if (!['approver', 'superadmin', 'managerial'].includes(currentUser.role)) {
+          window.location.replace('/login.html'); return;
+        }
+        document.getElementById('userInfo').textContent = `${currentUser.fullName} (${currentUser.employeeId})`;
+        document.getElementById('scopeLabel').textContent = 'ภาพรวมทั้งระบบ';
+        if (currentUser.role === 'superadmin') {
+          document.getElementById('userStatsRow').style.display = '';
+        }
+        // Set back-nav link based on role
+        const backBtn = document.getElementById('btnApproveBack');
+        if (currentUser.role === 'managerial') {
+          backBtn.href = '/managerial.html';
+          backBtn.title = 'รายงาน';
+          backBtn.querySelector('.btn-label').textContent = 'รายงาน';
+        }
+        loadDashboard();
+      } catch { window.location.replace('/login.html'); }
+    })();
+    async function logout() {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      window.location.replace('/login.html');
+    }
+  </script>
+
+  <div class="container-lg py-4">
+
+    <!-- Header -->
+    <div class="card shadow-sm mb-4">
+      <div class="page-header app-topbar">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 app-topbar-inner py-1">
+          <div>
+            <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Dashboard — Iron Drop</h5>
+            <small class="opacity-75" id="scopeLabel">กำลังโหลด...</small>
+          </div>
+          <div class="d-flex align-items-center gap-2 flex-wrap hdr-actions app-nav-actions">
+            <span class="app-page-chip"><i class="fas fa-chart-line"></i>หน้าแดชบอร์ด</span>
+            <button class="btn btn-outline-light btn-sm refresh-btn app-nav-btn" onclick="loadDashboard()" title="รีเฟรช">
+              <i class="fas fa-sync-alt"></i><span class="btn-label ms-1">รีเฟรช</span>
+            </button>
+            <a href="/approve.html" id="btnApproveBack" class="btn btn-outline-light btn-sm app-nav-btn" title="หน้าหลัก">
+              <i class="fas fa-home"></i><span class="btn-label ms-1">หน้าหลัก</span>
+            </a>
+            <span class="app-user-chip" id="userInfo"><i class="fas fa-user"></i>กำลังโหลด...</span>
+            <button class="btn btn-outline-light btn-sm app-nav-btn" onclick="logout()" title="ออก">
+              <i class="fas fa-sign-out-alt"></i><span class="btn-label ms-1">ออก</span>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="card-body py-2 border-bottom">
+        <small class="text-muted">อัพเดตล่าสุด: <span id="lastUpdate">–</span></small>
+      </div>
+
+      <!-- KPI Row -->
+      <div class="card-body">
+        <div class="row g-3" id="kpiRow">
+          <div class="col-6 col-md-4 col-lg-2">
+            <div class="kpi-card kpi-total">
+              <div class="kpi-num" id="kpiTotal">–</div>
+              <div class="kpi-label">คำขอทั้งหมด</div>
+              <i class="fas fa-clipboard-list icon-bg"></i>
+            </div>
+          </div>
+          <div class="col-6 col-md-4 col-lg-2">
+            <div class="kpi-card kpi-pending">
+              <div class="kpi-num" id="kpiPending">–</div>
+              <div class="kpi-label">รออนุมัติ</div>
+              <i class="fas fa-clock icon-bg"></i>
+            </div>
+          </div>
+          <div class="col-6 col-md-4 col-lg-2">
+            <div class="kpi-card kpi-approved">
+              <div class="kpi-num" id="kpiApproved">–</div>
+              <div class="kpi-label">อนุมัติแล้ว</div>
+              <i class="fas fa-check-circle icon-bg"></i>
+            </div>
+          </div>
+          <div class="col-6 col-md-4 col-lg-2">
+            <div class="kpi-card kpi-rejected">
+              <div class="kpi-num" id="kpiRejected">–</div>
+              <div class="kpi-label">ปฏิเสธ</div>
+              <i class="fas fa-times-circle icon-bg"></i>
+            </div>
+          </div>
+          <div class="col-6 col-md-4 col-lg-2">
+            <div class="kpi-card kpi-completed">
+              <div class="kpi-num" id="kpiCompleted">–</div>
+              <div class="kpi-label">เสร็จสิ้น</div>
+              <i class="fas fa-flag-checkered icon-bg"></i>
+            </div>
+          </div>
+          <div class="col-6 col-md-4 col-lg-2">
+            <div class="kpi-card kpi-weight">
+              <div class="kpi-num" id="kpiWeight">–</div>
+              <div class="kpi-label">น้ำหนักรวม (กก.)</div>
+              <i class="fas fa-weight-hanging icon-bg"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- User Stats (superadmin only) -->
+    <div class="row g-3 mb-4" id="userStatsRow" style="display:none">
+      <div class="col-12">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <p class="section-label mb-3"><i class="fas fa-users me-1"></i>ผู้ใช้งานในระบบ (ที่ใช้งานอยู่)</p>
+            <div class="row g-3 text-center">
+              <div class="col-4">
+                <div class="fs-3 fw-bold text-primary" id="uSubmitter">–</div>
+                <div class="small text-muted">พนักงานส่งฟอร์ม</div>
+              </div>
+              <div class="col-4">
+                <div class="fs-3 fw-bold text-success" id="uApprover">–</div>
+                <div class="small text-muted">ผู้อนุมัติ</div>
+              </div>
+              <div class="col-4">
+                <div class="fs-3 fw-bold text-purple" id="uSuperadmin" style="color:#8b5cf6">–</div>
+                <div class="small text-muted">SuperAdmin</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Charts Row 1 -->
+    <div class="row g-3 mb-4">
+      <!-- Weight trend (bar) -->
+      <div class="col-lg-8">
+        <div class="card shadow-sm h-100">
+          <div class="card-body">
+            <p class="section-label"><i class="fas fa-chart-bar me-1"></i>น้ำหนักเศษเหล็ก 14 วันที่ผ่านมา</p>
+            <div class="chart-wrap-tall"><canvas id="chartDay"></canvas></div>
+          </div>
+        </div>
+      </div>
+      <!-- Weight by type (doughnut) -->
+      <div class="col-lg-4">
+        <div class="card shadow-sm h-100">
+          <div class="card-body">
+            <p class="section-label"><i class="fas fa-chart-pie me-1"></i>สัดส่วนประเภทเหล็ก</p>
+            <div class="chart-wrap"><canvas id="chartType"></canvas></div>
+            <div id="typeLegend" class="mt-2"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Charts Row 2 -->
+    <div class="row g-3 mb-4">
+      <!-- Weight by area (horizontal bar) -->
+      <div class="col-lg-6">
+        <div class="card shadow-sm h-100">
+          <div class="card-body">
+            <p class="section-label"><i class="fas fa-industry me-1"></i>น้ำหนักตามพื้นที่ (Top 8)</p>
+            <div class="chart-wrap-tall"><canvas id="chartArea"></canvas></div>
+          </div>
+        </div>
+      </div>
+      <!-- Weight by branch (superadmin) / Status breakdown (submitter) -->
+      <div class="col-lg-6">
+        <div class="card shadow-sm h-100">
+          <div class="card-body">
+            <p class="section-label" id="chart3Label"><i class="fas fa-building me-1"></i>น้ำหนักตามสาขา</p>
+            <div class="chart-wrap-tall"><canvas id="chartBranch"></canvas></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Weight by scrap type breakdown table -->
+    <div class="card shadow-sm mb-4">
+      <div class="card-body">
+        <p class="section-label"><i class="fas fa-weight-hanging me-1"></i>น้ำหนักแต่ละประเภทเศษเหล็ก</p>
+        <div class="table-responsive">
+          <table class="table table-sm table-hover align-middle mb-0" id="typeTable">
+            <thead class="table-light">
+              <tr>
+                <th style="width:140px">กลุ่ม</th>
+                <th>ประเภท</th>
+                <th class="text-end" style="width:140px">น้ำหนัก (กก.)</th>
+                <th style="width:200px">สัดส่วน</th>
+              </tr>
+            </thead>
+            <tbody id="typeTbody">
+              <tr>
+                <td colspan="4" class="text-center text-muted py-3">กำลังโหลด...</td>
+              </tr>
+            </tbody>
+            <tfoot id="typeTfoot"></tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent submissions -->
+    <div class="card shadow-sm mb-4">
+      <div class="card-body">
+        <p class="section-label"><i class="fas fa-history me-1"></i>คำขอล่าสุด 8 รายการ</p>
+        <div class="table-responsive">
+          <table class="table table-hover table-sm table-recent mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>รหัสอ้างอิง</th>
+                <th>สาขา</th>
+                <th>ผู้ส่ง</th>
+                <th class="text-center">สถานะ</th>
+                <th>วันที่ส่ง</th>
+              </tr>
+            </thead>
+            <tbody id="recentTbody">
+              <tr>
+                <td colspan="5" class="text-center text-muted py-3">กำลังโหลด...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /container -->
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/nav-unified.js"></script>
+  <script>
+    let chartDay = null;
+    let chartType = null;
+    let chartArea = null;
+    let chartBranch = null;
+
+    const STATUS_TH = { pending: 'รออนุมัติ', approved: 'อนุมัติแล้ว', rejected: 'ปฏิเสธ', completed: 'เสร็จสิ้น' };
+    const GROUP_TH = { thin: 'เหล็กบาง', thick: 'เหล็กหนา', special: 'เหล็กหนาพิเศษ' };
+
+    const TYPE_GROUPS = {
+      thin: ['thin_1', 'thin_2', 'thin_3', 'thin_4'],
+      thick: ['thick_1', 'thick_2'],
+      special: ['special_1'],
+    };
+    const TYPE_LABELS = {
+      thin_1: 'เศษลวดหัวแบ่ง',
+      thin_2: 'สายแพ็คเหล็ก',
+      thin_3: 'เศษลวดปลอก',
+      thin_4: 'ลวดผูกเหล็กรัดลวดปลอก',
+      thick_1: 'เศษเหล็กโดเวล',
+      thick_2: 'เหล็กรูปพรรณเศษชิ้นส่วนเครื่องจักร/เศษเหล็กเพลท',
+      special_1: 'เศษเหล็กแผ่นจากการตัดเพลทเครื่องตัดพลาสม่า',
+    };
+    const GROUP_COLORS = { thin: '#3b82f6', thick: '#f59e0b', special: '#ec4899' };
+
+    async function loadDashboard() {
+      try {
+        const res = await fetch('/api/dashboard');
+        if (!res.ok) { console.error('dashboard fetch failed'); return; }
+        const d = await res.json();
+        document.getElementById('lastUpdate').textContent = new Date().toLocaleString('th-TH');
+        renderKPI(d);
+        renderDay(d.weightByDay);
+        renderType(d.weightByGroup);
+        renderArea(d.weightByArea);
+        renderBranch(d);
+        renderTypeTable(d.weightByType, d.totalWeight);
+        renderRecent(d.recentSubmissions);
+        if (d.userStats) renderUserStats(d.userStats);
+      } catch (e) { console.error(e); }
+    }
+
+    // ── KPI ──────────────────────────────────────────────────────────────────────
+    function renderKPI(d) {
+      document.getElementById('kpiTotal').textContent = d.counts.total;
+      document.getElementById('kpiPending').textContent = d.counts.pending;
+      document.getElementById('kpiApproved').textContent = d.counts.approved;
+      document.getElementById('kpiRejected').textContent = d.counts.rejected;
+      document.getElementById('kpiCompleted').textContent = d.counts.completed;
+      document.getElementById('kpiWeight').textContent = d.totalWeight.toLocaleString('th-TH', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+    }
+
+    // ── User stats ────────────────────────────────────────────────────────────────
+    function renderUserStats(u) {
+      document.getElementById('uSubmitter').textContent = u.submitter || 0;
+      document.getElementById('uApprover').textContent = u.approver || 0;
+      document.getElementById('uSuperadmin').textContent = u.superadmin || 0;
+    }
+
+    // ── Day trend bar ─────────────────────────────────────────────────────────────
+    function renderDay(data) {
+      // Fill missing dates in last 14 days
+      const today = new Date();
+      const map = {};
+      data.forEach(d => { map[d.date] = d.weight; });
+      const labels = [], values = [];
+      for (let i = 13; i >= 0; i--) {
+        const dt = new Date(today);
+        dt.setDate(dt.getDate() - i);
+        const key = dt.toISOString().split('T')[0];
+        labels.push(dt.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' }));
+        values.push(map[key] || 0);
+      }
+      if (chartDay) chartDay.destroy();
+      chartDay = new Chart(document.getElementById('chartDay'), {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            label: 'น้ำหนัก (กก.)',
+            data: values,
+            backgroundColor: 'rgba(37,99,168,0.7)',
+            borderColor: '#1a3a5c',
+            borderWidth: 1,
+            borderRadius: 4,
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { beginAtZero: true, ticks: { font: { size: 11 } } },
+            x: { ticks: { font: { size: 11 } } }
+          }
+        }
+      });
+    }
+
+    // ── Type breakdown table ─────────────────────────────────────────────────────
+    function renderTypeTable(weightByType, totalWeight) {
+      const tbody = document.getElementById('typeTbody');
+      const tfoot = document.getElementById('typeTfoot');
+      let rows = '';
+      for (const [group, types] of Object.entries(TYPE_GROUPS)) {
+        const groupColor = GROUP_COLORS[group];
+        let groupTotal = 0;
+        const typeRows = types.map(t => {
+          const w = weightByType[t] || 0;
+          groupTotal += w;
+          const pct = totalWeight ? ((w / totalWeight) * 100).toFixed(1) : '0.0';
+          const barW = totalWeight ? Math.round((w / totalWeight) * 100) : 0;
+          return `<tr>
+        <td></td>
+        <td class="small">${TYPE_LABELS[t] || t}</td>
+        <td class="text-end fw-semibold">${w > 0 ? w.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '<span class="text-muted">–</span>'}</td>
+        <td>
+          <div class="d-flex align-items-center gap-2">
+            <div class="progress flex-grow-1" style="height:8px">
+              <div class="progress-bar" style="width:${barW}%;background:${groupColor}" role="progressbar"></div>
+            </div>
+            <small class="text-muted" style="width:38px;text-align:right">${pct}%</small>
+          </div>
+        </td>
+      </tr>`;
+        });
+        const groupPct = totalWeight ? ((groupTotal / totalWeight) * 100).toFixed(1) : '0.0';
+        rows += `<tr class="table-light">
+      <td colspan="2" class="fw-bold small" style="color:${groupColor}">
+        <span class="d-inline-block rounded me-2" style="width:10px;height:10px;background:${groupColor}"></span>
+        ${GROUP_TH[group]}
+      </td>
+      <td class="text-end fw-bold">${groupTotal > 0 ? groupTotal.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '–'}</td>
+      <td><small class="text-muted">${groupPct}%</small></td>
+    </tr>`;
+        rows += typeRows.join('');
+      }
+      tbody.innerHTML = rows;
+      tfoot.innerHTML = `<tr class="table-secondary fw-bold">
+    <td colspan="2">รวมทั้งหมด</td>
+    <td class="text-end">${totalWeight.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} กก.</td>
+    <td></td>
+  </tr>`;
+    }
+
+    // ── Type doughnut ─────────────────────────────────────────────────────────────
+    function renderType(wg) {
+      const labels = [GROUP_TH.thin, GROUP_TH.thick, GROUP_TH.special];
+      const values = [wg.thin, wg.thick, wg.special];
+      const colors = ['#3b82f6', '#f59e0b', '#ec4899'];
+      if (chartType) chartType.destroy();
+      chartType = new Chart(document.getElementById('chartType'), {
+        type: 'doughnut',
+        data: {
+          labels,
+          datasets: [{ data: values, backgroundColor: colors, borderWidth: 2 }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          cutout: '62%',
+          plugins: { legend: { display: false } }
+        }
+      });
+      // Custom legend
+      const total = values.reduce((a, b) => a + b, 0);
+      document.getElementById('typeLegend').innerHTML = labels.map((l, i) => {
+        const pct = total ? ((values[i] / total) * 100).toFixed(1) : '0.0';
+        return `<div class="d-flex justify-content-between align-items-center mb-1">
+      <span><span class="d-inline-block rounded me-1" style="width:12px;height:12px;background:${colors[i]}"></span>
+      <small>${l}</small></span>
+      <small class="text-muted fw-semibold">${values[i].toLocaleString('th-TH', { maximumFractionDigits: 1 })} กก. (${pct}%)</small>
+    </div>`;
+      }).join('');
+    }
+
+    // ── Area horizontal bar ───────────────────────────────────────────────────────
+    function renderArea(data) {
+      const labels = data.map(d => d.area);
+      const values = data.map(d => d.weight);
+      if (chartArea) chartArea.destroy();
+      chartArea = new Chart(document.getElementById('chartArea'), {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            label: 'น้ำหนัก (กก.)',
+            data: values,
+            backgroundColor: 'rgba(16,185,129,0.75)',
+            borderColor: '#065f46',
+            borderWidth: 1,
+            borderRadius: 4,
+          }]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { beginAtZero: true, ticks: { font: { size: 11 } } },
+            y: { ticks: { font: { size: 11 } } }
+          }
+        }
+      });
+    }
+
+    // ── Branch bar / status bar ───────────────────────────────────────────────────
+    function renderBranch(d) {
+      const isSuperAdmin = currentUser && currentUser.role === 'superadmin';
+      let labels, values, color;
+      if (isSuperAdmin && d.weightByBranch.length > 0) {
+        labels = d.weightByBranch.map(x => x.branch);
+        values = d.weightByBranch.map(x => x.weight);
+        color = 'rgba(139,92,246,0.75)';
+      } else {
+        // Status breakdown chart for submitter (or when no branch data)
+        document.getElementById('chart3Label').innerHTML =
+          '<i class="fas fa-chart-bar me-1"></i>สรุปตามสถานะ';
+        labels = ['รออนุมัติ', 'อนุมัติแล้ว', 'ปฏิเสธ', 'เสร็จสิ้น'];
+        values = [d.counts.pending, d.counts.approved, d.counts.rejected, d.counts.completed];
+        color = ['rgba(245,158,11,.8)', 'rgba(59,130,246,.8)', 'rgba(239,68,68,.8)', 'rgba(16,185,129,.8)'];
+      }
+      if (chartBranch) chartBranch.destroy();
+      chartBranch = new Chart(document.getElementById('chartBranch'), {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            label: isSuperAdmin ? 'น้ำหนัก (กก.)' : 'จำนวน',
+            data: values,
+            backgroundColor: Array.isArray(color) ? color : values.map(() => color),
+            borderWidth: 1,
+            borderRadius: 4,
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { beginAtZero: true, ticks: { font: { size: 11 } } },
+            x: { ticks: { font: { size: 11 } } }
+          }
+        }
+      });
+    }
+
+    // ── Recent table ──────────────────────────────────────────────────────────────
+    function renderRecent(rows) {
+      const tbody = document.getElementById('recentTbody');
+      if (!rows || rows.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3">ยังไม่มีข้อมูล</td></tr>';
+        return;
+      }
+      tbody.innerHTML = rows.map(r => {
+        const stBadge = `<span class="badge badge-${r.status} rounded-pill px-2">${STATUS_TH[r.status] || r.status}</span>`;
+        const dt = new Date(r.submittedAt).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit', hour: '2-digit', minute: '2-digit' });
+        const shortId = r.id.split('-')[0].toUpperCase();
+        return `<tr>
+      <td><code class="small">${shortId}…</code></td>
+      <td>${r.branch || '–'}</td>
+      <td>${r.collectorName}</td>
+      <td class="text-center">${stBadge}</td>
+      <td class="text-muted">${dt}</td>
+    </tr>`;
+      }).join('');
+    }
+  </script>
+</body>
+
+</html>

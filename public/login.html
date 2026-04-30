@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>เข้าสู่ระบบ — Iron Drop</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      min-height: 100vh;
+      background: linear-gradient(135deg, #1a3a5c 0%, #2563a8 60%, #1e4f8a 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Prompt', sans-serif;
+    }
+
+    .login-card {
+      width: 100%;
+      max-width: 400px;
+      border-radius: 16px;
+      box-shadow: 0 8px 40px rgba(0, 0, 0, .35);
+      overflow: hidden;
+    }
+
+    .login-header {
+      background: linear-gradient(135deg, #1a3a5c, #2563a8);
+      color: #fff;
+      padding: 2rem 1.5rem 1.5rem;
+      text-align: center;
+    }
+
+    .login-header .logo-icon {
+      font-size: 3rem;
+      margin-bottom: .5rem;
+    }
+
+    .login-header h4 {
+      font-weight: 700;
+      margin-bottom: .15rem;
+    }
+
+    .login-header small {
+      opacity: .8;
+    }
+
+    .login-body {
+      background: #fff;
+      padding: 2rem 1.75rem;
+    }
+
+    .form-floating label {
+      color: #6c757d;
+    }
+
+    .role-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: .4rem;
+      padding: .35rem .75rem;
+      border-radius: 20px;
+      font-size: .8rem;
+      font-weight: 600;
+    }
+
+    .role-submitter {
+      background: #e7f3ff;
+      color: #084298;
+      border: 1px solid #b6d4fe;
+    }
+
+    .role-approver {
+      background: #d1e7dd;
+      color: #0a3622;
+      border: 1px solid #a3cfbb;
+    }
+
+    .login-footer {
+      background: #f8f9fa;
+      padding: .75rem 1.75rem;
+      font-size: .8rem;
+      color: #6c757d;
+      text-align: center;
+      border-top: 1px solid #dee2e6;
+    }
+
+    @media (max-width: 575px) {
+      body {
+        align-items: flex-start;
+        padding: 1rem .75rem;
+      }
+
+      .login-card {
+        border-radius: 12px;
+      }
+
+      .login-header {
+        padding: 1.5rem 1.25rem 1rem;
+      }
+
+      .login-header .logo-icon {
+        font-size: 2.25rem;
+      }
+
+      .login-header h4 {
+        font-size: 1.15rem;
+      }
+
+      .login-body {
+        padding: 1.25rem 1.25rem;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="login-card">
+    <!-- Header -->
+    <div class="login-header">
+      <div class="logo-icon"><i class="fas fa-recycle"></i></div>
+      <h4>Iron Drop</h4>
+      <small>ระบบบันทึกการเก็บเศษเหล็ก</small>
+    </div>
+
+    <!-- Body -->
+    <div class="login-body">
+      <p class="text-muted small mb-3 text-center">กรอกรหัสพนักงานและรหัสผ่านเพื่อเข้าสู่ระบบ</p>
+
+      <div id="alertBox" class="alert alert-danger py-2 small d-none" role="alert"></div>
+
+      <form id="loginForm" autocomplete="on">
+        <div class="form-floating mb-3">
+          <input type="text" class="form-control" id="employeeId" name="employeeId" placeholder="รหัสพนักงาน"
+            autocomplete="username" maxlength="50" required>
+          <label for="employeeId"><i class="fas fa-id-badge me-1 text-secondary"></i>รหัสพนักงาน</label>
+        </div>
+        <div class="form-floating mb-3 position-relative">
+          <input type="password" class="form-control" id="password" name="password" placeholder="รหัสผ่าน"
+            autocomplete="current-password" maxlength="100" required>
+          <label for="password"><i class="fas fa-lock me-1 text-secondary"></i>รหัสผ่าน</label>
+          <button type="button"
+            class="btn btn-link position-absolute end-0 top-50 translate-middle-y me-2 p-0 text-secondary"
+            style="z-index:10" onclick="togglePwd()" tabindex="-1" id="toggleBtn">
+            <i class="fas fa-eye" id="eyeIcon"></i>
+          </button>
+        </div>
+        <br>
+        <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold" id="loginBtn">
+          <i class="fas fa-sign-in-alt me-2"></i>เข้าสู่ระบบ
+        </button>
+      </form>
+    </div>
+
+    <script>
+      function togglePwd() {
+        const inp = document.getElementById('password');
+        const icon = document.getElementById('eyeIcon');
+        if (inp.type === 'password') { inp.type = 'text'; icon.className = 'fas fa-eye-slash'; }
+        else { inp.type = 'password'; icon.className = 'fas fa-eye'; }
+      }
+
+      function showAlert(msg) {
+        const box = document.getElementById('alertBox');
+        box.textContent = msg;
+        box.classList.remove('d-none');
+      }
+
+      // If already logged in → redirect
+      fetch('/api/auth/me').then(r => {
+        if (r.ok) return r.json();
+      }).then(user => {
+        if (user) {
+          const redirectMap = { submitter: '/', approver: '/approve.html', superadmin: '/admin.html' };
+          window.location.href = redirectMap[user.role] || '/';
+        }
+      }).catch(() => { });
+
+      document.getElementById('loginForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        document.getElementById('alertBox').classList.add('d-none');
+
+        const btn = document.getElementById('loginBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>กำลังเข้าสู่ระบบ...';
+
+        const employeeId = document.getElementById('employeeId').value.trim();
+        const password = document.getElementById('password').value;
+
+        try {
+          const res = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ employeeId, password }),
+          });
+          const data = await res.json();
+
+          if (data.success) {
+            // Redirect based on role
+            window.location.href = data.redirect || '/';
+          } else {
+            showAlert(data.error || 'เข้าสู่ระบบไม่สำเร็จ');
+          }
+        } catch {
+          showAlert('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้');
+        } finally {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fas fa-sign-in-alt me-2"></i>เข้าสู่ระบบ';
+        }
+      });
+    </script>
+</body>
+
+</html>

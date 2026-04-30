@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>จัดการคำขอ — Iron Drop</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="/nav-unified.css" rel="stylesheet">
+  <style>
+    body {
+      background: #eef2f7;
+      font-family: 'Prompt', sans-serif;
+    }
+
+    .page-header {
+      background: linear-gradient(135deg, #1a3a5c, #2563a8);
+      color: #fff;
+      padding: 1.25rem 1.5rem;
+      border-radius: 10px 10px 0 0;
+    }
+
+    .section-label {
+      font-weight: 700;
+      color: #1a3a5c;
+      border-left: 4px solid #2563a8;
+      padding-left: .6rem;
+    }
+
+    .status-pending {
+      background: #fff3cd;
+      color: #856404;
+      border: 1px solid #ffc107;
+    }
+
+    .status-approved {
+      background: #cfe2ff;
+      color: #084298;
+      border: 1px solid #0d6efd;
+    }
+
+    .status-rejected {
+      background: #f8d7da;
+      color: #58151c;
+      border: 1px solid #dc3545;
+    }
+
+    .status-completed {
+      background: #d1e7dd;
+      color: #0a3622;
+      border: 1px solid #198754;
+    }
+
+    .thumb {
+      max-height: 60px;
+      border-radius: 4px;
+      cursor: zoom-in;
+      border: 1px solid #ccc;
+    }
+
+    .info-row dt {
+      color: #6c757d;
+      font-weight: 500;
+    }
+
+    .info-row dd {
+      font-weight: 600;
+      margin-bottom: .25rem;
+    }
+
+    .summary-card .display-6 {
+      font-size: 1.8rem;
+      font-weight: 700;
+    }
+
+    .breakdown-group {
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: .75rem;
+    }
+
+    .breakdown-header {
+      padding: .5rem .85rem;
+      font-weight: 700;
+      font-size: .9rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .breakdown-header.thin {
+      background: #e7f3ff;
+      color: #084298;
+    }
+
+    .breakdown-header.thick {
+      background: #fff3e0;
+      color: #7c4d00;
+    }
+
+    .breakdown-header.special {
+      background: #fce4ec;
+      color: #880e4f;
+    }
+
+    .breakdown-body {
+      padding: .5rem .85rem;
+      background: #fff;
+    }
+
+    .subtype-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: .85rem;
+      padding: .2rem 0;
+      border-bottom: 1px dashed #f0f0f0;
+    }
+
+    .subtype-row:last-child {
+      border-bottom: none;
+    }
+
+    .table-req {
+      font-size: .85rem;
+    }
+
+    .table-req th {
+      white-space: nowrap;
+      background: #1a3a5c;
+      color: #fff;
+    }
+
+    .table-req td {
+      vertical-align: middle;
+    }
+
+    .row-pending td {
+      background: #fffdf0;
+    }
+
+    .row-approved td {
+      background: #f0f7ff;
+    }
+
+    .row-rejected td {
+      background: #fff5f5;
+    }
+
+    .row-completed td {
+      background: #f0fff4;
+    }
+
+    .nav-pill-filter .nav-link {
+      border-radius: 20px;
+      font-size: .82rem;
+      padding: .3rem .85rem;
+      color: #495057;
+    }
+
+    .nav-pill-filter .nav-link.active {
+      background: #2563a8;
+      color: #fff;
+    }
+
+    #toastContainer {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      z-index: 9999;
+    }
+
+    @media (max-width: 575px) {
+      body {
+        background: #fff;
+      }
+
+      .container-lg {
+        padding-left: .5rem;
+        padding-right: .5rem;
+      }
+
+      .py-4 {
+        padding-top: .75rem !important;
+        padding-bottom: .75rem !important;
+      }
+
+      .card.shadow-sm {
+        box-shadow: none !important;
+      }
+
+      .card {
+        border-radius: 0 !important;
+        border-left: none !important;
+        border-right: none !important;
+      }
+
+      .page-header {
+        border-radius: 0;
+        padding: .85rem 1rem;
+      }
+
+      .page-header h5 {
+        font-size: .95rem;
+      }
+
+      .card-body {
+        padding: .75rem;
+      }
+
+      .hdr-actions .btn-label {
+        display: none;
+      }
+
+      .hdr-actions .btn {
+        padding: .3rem .55rem;
+      }
+
+      #userInfo {
+        max-width: 80px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        display: inline-block;
+        vertical-align: middle;
+      }
+
+      /* Summary numbers */
+      .summary-card .display-6 {
+        font-size: 1.5rem !important;
+      }
+
+      /* Filter tabs scroll */
+      #filterTabs {
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        white-space: nowrap;
+        padding-bottom: 2px;
+      }
+
+      #filterTabs .nav-item {
+        flex-shrink: 0;
+      }
+
+      /* Search/filter row stack */
+      .filter-body .ms-auto {
+        width: 100% !important;
+        margin-left: 0 !important;
+      }
+
+      .filter-body .ms-auto input {
+        min-width: 0 !important;
+        width: 100% !important;
+      }
+
+      .filter-body .ms-auto select {
+        width: 100% !important;
+      }
+
+      .filter-body .ms-auto {
+        display: flex;
+        flex-direction: column;
+        gap: .4rem;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Auth guard -->
+  <script>
+    (async () => {
+      try {
+        const r = await fetch('/api/auth/me');
+        if (!r.ok) { window.location.replace('/login.html'); return; }
+        const u = await r.json();
+        if (u.role !== 'superadmin') { window.location.replace('/login.html'); return; }
+        document.getElementById('userInfo').textContent = `${u.fullName} (${u.employeeId})`;
+        loadData();
+      } catch { window.location.replace('/login.html'); }
+    })();
+    async function logout() {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      window.location.replace('/login.html');
+    }
+  </script>
+
+  <!-- Toast container -->
+  <div id="toastContainer"></div>
+
+  <div class="container-lg py-4">
+
+    <!-- Header -->
+    <div class="card shadow-sm mb-4">
+      <div class="page-header app-topbar">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 app-topbar-inner py-1">
+          <div>
+            <h5 class="mb-0"><i class="fas fa-clipboard-list me-2"></i>จัดการคำขอ</h5>
+            <small class="opacity-75">SuperAdmin — ดู / อนุมัติ / ปฏิเสธ / ลบ คำขอทั้งหมด</small>
+          </div>
+          <div class="d-flex align-items-center gap-2 flex-wrap hdr-actions app-nav-actions">
+            <span class="app-page-chip"><i class="fas fa-clipboard-list"></i>หน้าจัดการคำขอ</span>
+            <a href="/admin.html" class="btn btn-outline-light btn-sm app-nav-btn" title="จัดการผู้ใช้">
+              <i class="fas fa-users-cog"></i><span class="btn-label ms-1">ผู้ใช้</span>
+            </a>
+            <a href="/dashboard.html" class="btn btn-outline-light btn-sm app-nav-btn" title="Dashboard">
+              <i class="fas fa-chart-line"></i><span class="btn-label ms-1">แดชบอร์ด</span>
+            </a>
+            <span class="app-user-chip" id="userInfo"><i class="fas fa-user-shield"></i>กำลังโหลด...</span>
+            <button class="btn btn-outline-light btn-sm app-nav-btn" onclick="logout()" title="ออกจากระบบ">
+              <i class="fas fa-sign-out-alt"></i><span class="btn-label ms-1">ออกจากระบบ</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Summary counters -->
+      <div class="card-body border-bottom pb-3">
+        <div class="row g-2 text-center">
+          <div class="col-6 col-sm-4 col-md-2 summary-card">
+            <div class="display-6 text-secondary" id="cntAll">–</div>
+            <div class="small text-muted">ทั้งหมด</div>
+          </div>
+          <div class="col-6 col-sm-4 col-md-2 summary-card">
+            <div class="display-6 text-warning" id="cntPending">–</div>
+            <div class="small text-muted">รออนุมัติ</div>
+          </div>
+          <div class="col-6 col-sm-4 col-md-2 summary-card">
+            <div class="display-6 text-primary" id="cntApproved">–</div>
+            <div class="small text-muted">อนุมัติแล้ว</div>
+          </div>
+          <div class="col-6 col-sm-4 col-md-2 summary-card">
+            <div class="display-6 text-success" id="cntCompleted">–</div>
+            <div class="small text-muted">เสร็จสิ้น</div>
+          </div>
+          <div class="col-6 col-sm-4 col-md-2 summary-card">
+            <div class="display-6 text-danger" id="cntRejected">–</div>
+            <div class="small text-muted">ปฏิเสธ</div>
+          </div>
+          <div class="col-6 col-sm-4 col-md-2 d-flex align-items-center justify-content-center gap-2">
+            <button class="btn btn-outline-secondary btn-sm" onclick="loadData()">
+              <i class="fas fa-sync-alt me-1"></i>รีเฟรช
+            </button>
+            <button class="btn btn-outline-success btn-sm" onclick="exportCSV()">
+              <i class="fas fa-file-csv me-1"></i>CSV
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Filters -->
+      <div class="card-body border-bottom py-2 filter-body">
+        <div class="d-flex flex-wrap gap-2 align-items-center">
+          <!-- Status filter tabs -->
+          <ul class="nav nav-pill-filter mb-0" id="filterTabs">
+            <li class="nav-item"><button class="nav-link active" data-filter="all">ทั้งหมด</button></li>
+            <li class="nav-item"><button class="nav-link" data-filter="pending">รออนุมัติ</button></li>
+            <li class="nav-item"><button class="nav-link" data-filter="approved">อนุมัติแล้ว</button></li>
+            <li class="nav-item"><button class="nav-link" data-filter="completed">เสร็จสิ้น</button></li>
+            <li class="nav-item"><button class="nav-link" data-filter="rejected">ปฏิเสธ</button></li>
+          </ul>
+          <div class="ms-auto d-flex gap-2 flex-wrap">
+            <!-- Branch filter -->
+            <select class="form-select form-select-sm" id="filterBranch" onchange="applyFilters()" style="width:auto">
+              <option value="">ทุกสาขา</option>
+              <option value="Y5">Y5</option>
+              <option value="Y8">Y8</option>
+              <option value="Y11">Y11</option>
+            </select>
+            <!-- Search -->
+            <input type="text" class="form-control form-control-sm" id="searchInput" placeholder="ค้นหา ชื่อ / แผนก..."
+              style="min-width:200px" oninput="applyFilters()">
+          </div>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover table-req mb-0 align-middle" id="reqTable">
+            <thead>
+              <tr>
+                <th class="ps-3" style="width:40px">#</th>
+                <th>สาขา</th>
+                <th>ผู้เก็บ</th>
+                <th>แผนก / ตำแหน่ง</th>
+                <th class="text-end">น้ำหนักรวม (กก.)</th>
+                <th class="text-center">สถานะ</th>
+                <th>วันที่ส่ง</th>
+                <th>อนุมัติโดย</th>
+                <th class="text-center" style="width:110px">จัดการ</th>
+              </tr>
+            </thead>
+            <tbody id="reqTbody">
+              <tr>
+                <td colspan="9" class="text-center text-muted py-4">
+                  <i class="fas fa-spinner fa-spin me-1"></i>กำลังโหลด...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Pagination -->
+      <div class="card-body border-top py-2 d-flex align-items-center justify-content-between flex-wrap gap-2">
+        <div class="small text-muted" id="pageInfo">–</div>
+        <nav>
+          <ul class="pagination pagination-sm mb-0" id="pagination"></ul>
+        </nav>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── Detail Modal ──────────────────────────────────────────────────────── -->
+  <div class="modal fade" id="detailModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-scrollable modal-xl">
+      <div class="modal-content">
+        <div class="modal-header" style="background:#1a3a5c; color:#fff;">
+          <h5 class="modal-title" id="modalTitle">รายละเอียดคำขอ</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body" id="modalBody"></div>
+        <div class="modal-footer d-flex flex-wrap gap-2" id="modalFooter"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── Approve Dialog ────────────────────────────────────────────────────── -->
+  <div class="modal fade" id="approveModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header bg-success text-white">
+          <h5 class="modal-title"><i class="fas fa-check-circle me-2"></i>อนุมัติคำขอ</h5>
+          <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <p class="mb-2 text-muted small">SuperAdmin จะอนุมัติคำขอนี้แทนผู้อนุมัติ</p>
+          <div class="alert alert-warning py-2 small"><i
+              class="fas fa-exclamation-triangle me-1"></i>การอนุมัติจะบันทึกชื่อ SuperAdmin เป็นผู้อนุมัติ</div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+          <button class="btn btn-success" id="btnConfirmApprove"><i class="fas fa-check me-1"></i>ยืนยันอนุมัติ</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── Reject Dialog ─────────────────────────────────────────────────────── -->
+  <div class="modal fade" id="rejectModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header bg-danger text-white">
+          <h5 class="modal-title"><i class="fas fa-times-circle me-2"></i>ปฏิเสธคำขอ</h5>
+          <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <label class="form-label fw-semibold">เหตุผลที่ปฏิเสธ</label>
+          <textarea class="form-control" id="rejectReason" rows="3" placeholder="ระบุเหตุผล (ถ้ามี)"
+            maxlength="500"></textarea>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+          <button class="btn btn-danger" id="btnConfirmReject"><i class="fas fa-times me-1"></i>ยืนยันปฏิเสธ</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── Delete Dialog ─────────────────────────────────────────────────────── -->
+  <div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header bg-dark text-white">
+          <h5 class="modal-title"><i class="fas fa-trash me-2"></i>ลบคำขอ</h5>
+          <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="alert alert-danger py-2 small"><i
+              class="fas fa-exclamation-triangle me-1"></i>การดำเนินการนี้<strong>ไม่สามารถย้อนกลับได้</strong></div>
+          <p class="mb-0">คุณต้องการลบคำขอนี้ออกจากระบบหรือไม่?</p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+          <button class="btn btn-danger" id="btnConfirmDelete"><i class="fas fa-trash me-1"></i>ยืนยันลบ</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── Image viewer ──────────────────────────────────────────────────────── -->
+  <div class="modal fade" id="imgModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content">
+        <div class="modal-body p-0 text-center bg-dark">
+          <img id="imgSrc" src="" class="img-fluid" style="max-height:80vh">
+        </div>
+        <div class="modal-footer"><button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">ปิด</button></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/nav-unified.js"></script>
+  <script>
+    // ─── Constants ────────────────────────────────────────────────────────────────
+    const TYPE_LABELS = {
+      thin_1: 'เศษลวดหัวแบ่ง', thin_2: 'สายแพ็คเหล็ก', thin_3: 'เศษลวดปลอก',
+      thin_4: 'ลวดผูกเหล็กรัดลวดปลอก',
+      thick_1: 'เศษเหล็กโดเวล',
+      thick_2: 'เหล็กรูปพรรณเศษชิ้นส่วนเครื่องจักร/เศษเหล็กเพลท',
+      special_1: 'เศษเหล็กแผ่นจากการตัดเพลทเครื่องตัดพลาสม่า',
+    };
+    const STATUS_TH = { pending: 'รออนุมัติ', approved: 'อนุมัติแล้ว', rejected: 'ปฏิเสธ', completed: 'เสร็จสิ้น' };
+    const STATUS_CLASS = { pending: 'status-pending', approved: 'status-approved', rejected: 'status-rejected', completed: 'status-completed' };
+    const STATUS_ROW = { pending: 'row-pending', approved: 'row-approved', rejected: 'row-rejected', completed: 'row-completed' };
+    const GROUP_COLORS = { thin: '#084298', thick: '#7c4d00', special: '#880e4f' };
+    const GROUP_BG = { thin: '#e7f3ff', thick: '#fff3e0', special: '#fce4ec' };
+    const PAGE_SIZE = 20;
+
+    // ─── State ────────────────────────────────────────────────────────────────────
+    let allData = [], filteredData = [], currentFilter = 'all', currentPage = 1;
+    let activeId = null;
+
+    // ─── Bootstrap Modal instances ────────────────────────────────────────────────
+    const bsDetail = () => bootstrap.Modal.getOrCreateInstance(document.getElementById('detailModal'));
+    const bsApprove = () => bootstrap.Modal.getOrCreateInstance(document.getElementById('approveModal'));
+    const bsReject = () => bootstrap.Modal.getOrCreateInstance(document.getElementById('rejectModal'));
+    const bsDelete = () => bootstrap.Modal.getOrCreateInstance(document.getElementById('deleteModal'));
+    const bsImg = () => bootstrap.Modal.getOrCreateInstance(document.getElementById('imgModal'));
+
+    // ─── Filter tabs ─────────────────────────────────────────────────────────────
+    document.getElementById('filterTabs').addEventListener('click', e => {
+      const btn = e.target.closest('[data-filter]');
+      if (!btn) return;
+      document.querySelectorAll('#filterTabs .nav-link').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentFilter = btn.dataset.filter;
+      currentPage = 1;
+      applyFilters();
+    });
+
+    // ─── Load data ────────────────────────────────────────────────────────────────
+    async function loadData() {
+      document.getElementById('reqTbody').innerHTML =
+        '<tr><td colspan="9" class="text-center text-muted py-4"><i class="fas fa-spinner fa-spin me-1"></i>กำลังโหลด...</td></tr>';
+      try {
+        allData = await fetch('/api/admin/submissions').then(r => r.json());
+        updateCounters();
+        applyFilters();
+      } catch {
+        document.getElementById('reqTbody').innerHTML =
+          '<tr><td colspan="9" class="text-center py-4"><div class="alert alert-danger mb-0">ไม่สามารถโหลดข้อมูลได้</div></td></tr>';
+      }
+    }
+
+    // ─── Counters ────────────────────────────────────────────────────────────────
+    function updateCounters() {
+      document.getElementById('cntAll').textContent = allData.length;
+      document.getElementById('cntPending').textContent = allData.filter(s => s.status === 'pending').length;
+      document.getElementById('cntApproved').textContent = allData.filter(s => s.status === 'approved').length;
+      document.getElementById('cntCompleted').textContent = allData.filter(s => s.status === 'completed').length;
+      document.getElementById('cntRejected').textContent = allData.filter(s => s.status === 'rejected').length;
+    }
+
+    // ─── Apply filters ────────────────────────────────────────────────────────────
+    function applyFilters() {
+      const branch = document.getElementById('filterBranch').value;
+      const search = document.getElementById('searchInput').value.trim().toLowerCase();
+
+      filteredData = allData.filter(s => {
+        if (currentFilter !== 'all' && s.status !== currentFilter) return false;
+        if (branch && s.branch !== branch) return false;
+        if (search) {
+          const haystack = `${s.collectorName} ${s.department || ''} ${s.branch} ${s.position || ''}`.toLowerCase();
+          if (!haystack.includes(search)) return false;
+        }
+        return true;
+      });
+
+      currentPage = 1;
+      renderTable();
+    }
+
+    // ─── Render table ─────────────────────────────────────────────────────────────
+    function renderTable() {
+      const tbody = document.getElementById('reqTbody');
+      const total = filteredData.length;
+      const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+      if (currentPage > pages) currentPage = pages;
+
+      const slice = filteredData.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+      if (slice.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted py-5"><i class="fas fa-folder-open fa-2x d-block mb-2 text-secondary"></i>ไม่พบข้อมูล</td></tr>';
+      } else {
+        tbody.innerHTML = slice.map((s, idx) => {
+          const totalWeight = (s.items || []).reduce((sum, it) => sum + (it.weight || 0), 0);
+          const dt = new Date(s.submittedAt).toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: '2-digit' });
+          const rowNo = (currentPage - 1) * PAGE_SIZE + idx + 1;
+          const actionBtns = s.status === 'pending'
+            ? `<button class="btn btn-success btn-sm py-0 px-2" onclick="openApprove('${s.id}');event.stopPropagation()" title="อนุมัติ"><i class="fas fa-check"></i></button>
+           <button class="btn btn-warning btn-sm py-0 px-2" onclick="openReject('${s.id}');event.stopPropagation()" title="ปฏิเสธ"><i class="fas fa-times"></i></button>`
+            : '';
+          return `<tr class="${STATUS_ROW[s.status] || ''}" style="cursor:pointer" onclick="openDetail('${s.id}')">
+        <td class="ps-3 text-muted">${rowNo}</td>
+        <td><span class="fw-semibold">${esc(s.branch)}</span></td>
+        <td>${esc(s.collectorName)}</td>
+        <td class="text-muted small">${esc(s.department || '–')}${s.position ? ' / ' + esc(s.position) : ''}</td>
+        <td class="text-end fw-semibold">${totalWeight.toFixed(1)}</td>
+        <td class="text-center"><span class="badge rounded-pill px-2 ${STATUS_CLASS[s.status]}">${STATUS_TH[s.status]}</span></td>
+        <td class="small text-muted">${dt}</td>
+        <td class="small">${s.approvedBy ? esc(s.approvedBy) : '<span class="text-muted">–</span>'}</td>
+        <td class="text-center" onclick="event.stopPropagation()">
+          <div class="d-flex gap-1 justify-content-center">
+            ${actionBtns}
+            <button class="btn btn-outline-secondary btn-sm py-0 px-2" onclick="openDetail('${s.id}')" title="ดูรายละเอียด"><i class="fas fa-eye"></i></button>
+            <button class="btn btn-outline-danger btn-sm py-0 px-2" onclick="openDelete('${s.id}')" title="ลบ"><i class="fas fa-trash"></i></button>
+          </div>
+        </td>
+      </tr>`;
+        }).join('');
+      }
+
+      // Page info
+      document.getElementById('pageInfo').textContent =
+        total === 0 ? 'ไม่มีข้อมูล' : `แสดง ${Math.min((currentPage - 1) * PAGE_SIZE + 1, total)}–${Math.min(currentPage * PAGE_SIZE, total)} จาก ${total} รายการ`;
+
+      // Pagination
+      renderPagination(pages);
+    }
+
+    // ─── Pagination ───────────────────────────────────────────────────────────────
+    function renderPagination(pages) {
+      const ul = document.getElementById('pagination');
+      if (pages <= 1) { ul.innerHTML = ''; return; }
+      const MAX_SHOW = 5;
+      let start = Math.max(1, currentPage - Math.floor(MAX_SHOW / 2));
+      let end = Math.min(pages, start + MAX_SHOW - 1);
+      if (end - start + 1 < MAX_SHOW) start = Math.max(1, end - MAX_SHOW + 1);
+
+      let html = `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+    <a class="page-link" href="#" onclick="goPage(${currentPage - 1});return false;">&laquo;</a></li>`;
+      if (start > 1) html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+      for (let p = start; p <= end; p++) {
+        html += `<li class="page-item ${p === currentPage ? 'active' : ''}">
+      <a class="page-link" href="#" onclick="goPage(${p});return false;">${p}</a></li>`;
+      }
+      if (end < pages) html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+      html += `<li class="page-item ${currentPage === pages ? 'disabled' : ''}">
+    <a class="page-link" href="#" onclick="goPage(${currentPage + 1});return false;">&raquo;</a></li>`;
+      ul.innerHTML = html;
+    }
+    function goPage(p) {
+      currentPage = p;
+      renderTable();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // ─── Detail Modal ─────────────────────────────────────────────────────────────
+    function openDetail(id) {
+      activeId = id;
+      const s = allData.find(x => x.id === id);
+      if (!s) return;
+
+      document.getElementById('modalTitle').innerHTML =
+        `<i class="fas fa-clipboard-list me-2"></i>รายละเอียด — ${esc(s.collectorName)} (สาขา ${esc(s.branch)})`;
+
+      const totalWeight = (s.items || []).reduce((sum, it) => sum + (it.weight || 0), 0);
+
+      const itemsHtml = (s.items || []).map((it, i) => `
+    <tr>
+      <td>${i + 1}</td>
+      <td>${esc(formatDate(it.date))}</td>
+      <td>${esc(it.scrapArea || '–')}</td>
+      <td><span class="badge bg-secondary" style="font-size:.75rem">${esc(TYPE_LABELS[it.scrapType] || it.scrapType || '–')}</span></td>
+      <td class="text-end fw-semibold">${it.weight.toFixed(1)}</td>
+      <td>${it.bringer ? esc(it.bringer) : '<span class="text-muted">–</span>'}</td>
+      <td>${it.weighingPhoto
+          ? `<img src="/uploads/${esc(it.weighingPhoto)}" class="thumb" onclick="viewImg('/uploads/${esc(it.weighingPhoto)}');event.stopPropagation()">`
+          : '<span class="text-muted">–</span>'}</td>
+    </tr>`).join('');
+
+      let statusExtra = '';
+      if (s.status === 'approved') {
+        statusExtra = `<div class="alert alert-primary py-2 mt-3 mb-0 small">
+      <i class="fas fa-check-circle me-1"></i><strong>อนุมัติโดย:</strong> ${esc(s.approvedBy)}
+      &nbsp;|&nbsp;${new Date(s.approvedAt).toLocaleString('th-TH')}
+    </div>`;
+      } else if (s.status === 'completed') {
+        statusExtra = `<div class="alert alert-success py-2 mt-3 mb-0 small">
+      <i class="fas fa-lock me-1"></i><strong>เสร็จสิ้น</strong><br>
+      <strong>อนุมัติโดย:</strong> ${esc(s.approvedBy || '–')}<br>
+      <strong>สถานที่ทิ้ง:</strong> ${esc(s.disposalLocation || '–')}<br>
+      <small>บันทึกเมื่อ: ${s.disposalSubmittedAt ? new Date(s.disposalSubmittedAt).toLocaleString('th-TH') : '–'}</small>
+      ${s.disposalPhoto ? `<div class="mt-2"><img src="/uploads/${esc(s.disposalPhoto)}" class="thumb" style="max-height:100px" onclick="viewImg('/uploads/${esc(s.disposalPhoto)}')"></div>` : ''}
+    </div>`;
+      } else if (s.status === 'rejected') {
+        statusExtra = `<div class="alert alert-danger py-2 mt-3 mb-0 small">
+      <i class="fas fa-times-circle me-1"></i><strong>ปฏิเสธเมื่อ:</strong> ${new Date(s.approvedAt).toLocaleString('th-TH')}
+      ${s.rejectionReason ? `<br><strong>เหตุผล:</strong> ${esc(s.rejectionReason)}` : ''}
+    </div>`;
+      }
+
+      document.getElementById('modalBody').innerHTML = `
+    <dl class="row info-row mb-3 small">
+      <dt class="col-4 col-md-2">สาขา</dt>       <dd class="col-8 col-md-4">${esc(s.branch)}</dd>
+      <dt class="col-4 col-md-2">ผู้เก็บ</dt>     <dd class="col-8 col-md-4">${esc(s.collectorName)}</dd>
+      <dt class="col-4 col-md-2">แผนก</dt>        <dd class="col-8 col-md-4">${esc(s.department || '–')}</dd>
+      <dt class="col-4 col-md-2">ตำแหน่ง</dt>    <dd class="col-8 col-md-4">${esc(s.position || '–')}</dd>
+      <dt class="col-4 col-md-2">วันที่ส่ง</dt>  <dd class="col-8 col-md-4">${new Date(s.submittedAt).toLocaleString('th-TH')}</dd>
+      <dt class="col-4 col-md-2">สถานะ</dt>      <dd class="col-8 col-md-4"><span class="badge rounded-pill px-3 ${STATUS_CLASS[s.status]}">${STATUS_TH[s.status]}</span></dd>
+      <dt class="col-4 col-md-2">ID</dt>          <dd class="col-8 col-md-10 text-muted" style="font-family:monospace;font-size:.75rem">${s.id}</dd>
+    </dl>
+
+    <p class="section-label mb-2"><i class="fas fa-chart-bar me-1"></i>สรุปน้ำหนักรายประเภท</p>
+    ${buildBreakdownHtml(s.typeBreakdown)}
+
+    <p class="section-label mb-2 mt-3"><i class="fas fa-list me-1"></i>รายการทั้งหมด (รวม ${totalWeight.toFixed(1)} กก.)</p>
+    <div class="table-responsive">
+      <table class="table table-sm table-bordered align-middle mb-0">
+        <thead class="table-dark">
+          <tr><th>#</th><th>วันที่</th><th>พื้นที่</th><th>ประเภท</th><th>น้ำหนัก (กก.)</th><th>ผู้นำมา</th><th>รูปถ่าย</th></tr>
+        </thead>
+        <tbody>${itemsHtml || '<tr><td colspan="7" class="text-center text-muted">ไม่มีรายการ</td></tr>'}</tbody>
+      </table>
+    </div>
+    ${statusExtra}`;
+
+      let footer = `<button class="btn btn-outline-danger btn-sm" onclick="openDelete('${s.id}');bsDetail().hide()"><i class="fas fa-trash me-1"></i>ลบ</button>
+    <div class="flex-grow-1"></div>`;
+      if (s.status === 'pending') {
+        footer += `
+      <button class="btn btn-warning" onclick="openReject('${s.id}');bsDetail().hide()"><i class="fas fa-times me-1"></i>ปฏิเสธ</button>
+      <button class="btn btn-success" onclick="openApprove('${s.id}');bsDetail().hide()"><i class="fas fa-check me-1"></i>อนุมัติ</button>`;
+      }
+      footer += `<button class="btn btn-secondary" data-bs-dismiss="modal">ปิด</button>`;
+      document.getElementById('modalFooter').innerHTML = footer;
+
+      bsDetail().show();
+    }
+
+    // ─── Approve ──────────────────────────────────────────────────────────────────
+    function openApprove(id) {
+      activeId = id;
+      document.getElementById('btnConfirmApprove').onclick = confirmApprove;
+      bsApprove().show();
+    }
+    async function confirmApprove() {
+      try {
+        const res = await fetch(`/api/admin/submissions/${activeId}/approve`, { method: 'POST' });
+        const data = await res.json();
+        bsApprove().hide();
+        if (data.success) { showToast('อนุมัติคำขอเรียบร้อยแล้ว', 'success'); await loadData(); }
+        else showToast(data.error || 'เกิดข้อผิดพลาด', 'danger');
+      } catch { showToast('ไม่สามารถเชื่อมต่อได้', 'danger'); }
+    }
+
+    // ─── Reject ───────────────────────────────────────────────────────────────────
+    function openReject(id) {
+      activeId = id;
+      document.getElementById('rejectReason').value = '';
+      document.getElementById('btnConfirmReject').onclick = confirmReject;
+      bsReject().show();
+    }
+    async function confirmReject() {
+      const reason = document.getElementById('rejectReason').value.trim();
+      try {
+        const res = await fetch(`/api/admin/submissions/${activeId}/reject`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reason })
+        });
+        const data = await res.json();
+        bsReject().hide();
+        if (data.success) { showToast('ปฏิเสธคำขอเรียบร้อยแล้ว', 'warning'); await loadData(); }
+        else showToast(data.error || 'เกิดข้อผิดพลาด', 'danger');
+      } catch { showToast('ไม่สามารถเชื่อมต่อได้', 'danger'); }
+    }
+
+    // ─── Delete ───────────────────────────────────────────────────────────────────
+    function openDelete(id) {
+      activeId = id;
+      document.getElementById('btnConfirmDelete').onclick = confirmDelete;
+      bsDelete().show();
+    }
+    async function confirmDelete() {
+      try {
+        const res = await fetch(`/api/admin/submissions/${activeId}`, { method: 'DELETE' });
+        const data = await res.json();
+        bsDelete().hide();
+        if (data.success) { showToast('ลบคำขอเรียบร้อยแล้ว', 'secondary'); await loadData(); }
+        else showToast(data.error || 'เกิดข้อผิดพลาด', 'danger');
+      } catch { showToast('ไม่สามารถเชื่อมต่อได้', 'danger'); }
+    }
+
+    // ─── Image viewer ─────────────────────────────────────────────────────────────
+    function viewImg(src) {
+      document.getElementById('imgSrc').src = src;
+      bsImg().show();
+    }
+
+    // ─── Export CSV ───────────────────────────────────────────────────────────────
+    function exportCSV() {
+      if (!filteredData.length) { showToast('ไม่มีข้อมูลสำหรับส่งออก', 'warning'); return; }
+      const headers = ['ID', 'สาขา', 'ผู้เก็บ', 'แผนก', 'ตำแหน่ง', 'สถานะ', 'น้ำหนักรวม(กก.)', 'วันที่ส่ง', 'อนุมัติโดย', 'สถานที่ทิ้ง'];
+      const rows = filteredData.map(s => {
+        const w = (s.items || []).reduce((sum, it) => sum + (it.weight || 0), 0);
+        return [s.id, s.branch, s.collectorName, s.department || '', s.position || '', STATUS_TH[s.status] || s.status,
+        w.toFixed(2), new Date(s.submittedAt).toLocaleDateString('th-TH'), s.approvedBy || '', s.disposalLocation || ''];
+      });
+      const csv = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+      const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = `requests_${new Date().toISOString().split('T')[0]}.csv`;
+      a.click(); URL.revokeObjectURL(url);
+    }
+
+    // ─── Breakdown HTML ───────────────────────────────────────────────────────────
+    function buildBreakdownHtml(bd) {
+      let html = '';
+      for (const [key, g] of Object.entries(bd || {})) {
+        if (!g || g.totalWeight === 0) continue;
+        const subtypesHtml = Object.entries(g.subtypes || {}).map(([, info]) =>
+          `<div class="subtype-row"><span>${esc(info.label)}</span><span class="fw-semibold">${info.weight.toFixed(2)} กก.</span></div>`
+        ).join('');
+        html += `<div class="breakdown-group">
+      <div class="breakdown-header ${key}">
+        <span><i class="fas fa-layer-group me-1"></i>${esc(g.label)}</span>
+        <span>${g.totalWeight.toFixed(2)} กก.</span>
+      </div>
+      <div class="breakdown-body">${subtypesHtml}</div>
+    </div>`;
+      }
+      return html || '<p class="text-muted small">ไม่มีข้อมูลประเภท</p>';
+    }
+
+    // ─── Helpers ──────────────────────────────────────────────────────────────────
+    function esc(str) {
+      return String(str ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+    function formatDate(d) {
+      if (!d) return '–';
+      try { return new Date(d).toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric' }); }
+      catch { return d; }
+    }
+    function showToast(msg, type = 'success') {
+      const id = 'toast_' + Date.now();
+      const colors = { success: '#198754', danger: '#dc3545', warning: '#ffc107', secondary: '#6c757d' };
+      const el = document.createElement('div');
+      el.id = id;
+      el.style.cssText = `background:${colors[type] || '#333'};color:#fff;padding:.65rem 1rem;border-radius:8px;margin-top:.5rem;font-size:.875rem;box-shadow:0 4px 12px rgba(0,0,0,.25);min-width:200px`;
+      el.textContent = msg;
+      document.getElementById('toastContainer').appendChild(el);
+      setTimeout(() => el.remove(), 3500);
+    }
+  </script>
+</body>
+
+</html>

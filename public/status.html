@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ติดตามสถานะ / บันทึกสถานที่ทิ้ง</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="/nav-unified.css" rel="stylesheet">
+  <style>
+    body {
+      background: #eef2f7;
+      font-family: 'Prompt', sans-serif;
+    }
+
+    .page-header {
+      background: linear-gradient(135deg, #1a3a5c, #2563a8);
+      color: #fff;
+      padding: 1.25rem 1.5rem;
+      border-radius: 10px 10px 0 0;
+    }
+
+    .section-label {
+      font-weight: 700;
+      color: #1a3a5c;
+      border-left: 4px solid #2563a8;
+      padding-left: .6rem;
+      margin-bottom: 1rem;
+    }
+
+    .status-pending {
+      background: #fff3cd;
+      color: #856404;
+      border: 1px solid #ffc107;
+    }
+
+    .status-approved {
+      background: #cfe2ff;
+      color: #084298;
+      border: 1px solid #0d6efd;
+    }
+
+    .status-rejected {
+      background: #f8d7da;
+      color: #58151c;
+      border: 1px solid #dc3545;
+    }
+
+    .status-completed {
+      background: #d1e7dd;
+      color: #0a3622;
+      border: 1px solid #198754;
+    }
+
+    .breakdown-group {
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: .75rem;
+    }
+
+    .breakdown-header {
+      padding: .5rem .85rem;
+      font-weight: 700;
+      font-size: .9rem;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .breakdown-header.thin {
+      background: #e7f3ff;
+      color: #084298;
+    }
+
+    .breakdown-header.thick {
+      background: #fff3e0;
+      color: #7c4d00;
+    }
+
+    .breakdown-header.special {
+      background: #fce4ec;
+      color: #880e4f;
+    }
+
+    .breakdown-body {
+      padding: .5rem .85rem;
+      background: #fff;
+    }
+
+    .subtype-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: .85rem;
+      padding: .2rem 0;
+      border-bottom: 1px dashed #f0f0f0;
+    }
+
+    .subtype-row:last-child {
+      border-bottom: none;
+    }
+
+    .thumb {
+      max-height: 80px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      margin-top: 4px;
+      cursor: zoom-in;
+    }
+
+    .lock-badge {
+      font-size: 1rem;
+    }
+
+    /* List item layout */
+    .sub-item {
+      padding: .65rem .85rem;
+      cursor: pointer;
+      border-bottom: 1px solid #dee2e6;
+    }
+
+    .sub-item:hover {
+      background: #f8fafc;
+    }
+
+    .sub-item:last-child {
+      border-bottom: none;
+    }
+
+    .sub-id {
+      font-family: monospace;
+      font-size: .72rem;
+      color: #6c757d;
+    }
+
+    .sub-meta-row {
+      display: flex;
+      gap: .6rem;
+      align-items: center;
+      flex-wrap: wrap;
+      font-size: .78rem;
+      color: #6c757d;
+    }
+
+    .sub-weight {
+      font-weight: 600;
+      color: #1a3a5c;
+    }
+
+    /* Item cards (mobile) */
+    .item-card-m {
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      padding: .6rem .75rem;
+      margin-bottom: .5rem;
+      background: #fff;
+    }
+
+    .item-card-m .ic-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: .35rem;
+      gap: .5rem;
+    }
+
+    .item-card-m .ic-num {
+      background: #1a3a5c;
+      color: #fff;
+      border-radius: 50%;
+      width: 22px;
+      height: 22px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: .72rem;
+      font-weight: 700;
+    }
+
+    .item-card-m .ic-w {
+      font-weight: 700;
+      color: #1a3a5c;
+      white-space: nowrap;
+    }
+
+    .item-card-m .ic-row {
+      font-size: .8rem;
+      padding: .15rem 0;
+      display: flex;
+      justify-content: space-between;
+      gap: .5rem;
+    }
+
+    .item-card-m .ic-row .lbl {
+      color: #6c757d;
+      min-width: 64px;
+    }
+
+    .item-card-m .ic-row .val {
+      text-align: right;
+      word-break: break-word;
+    }
+
+    /* Show table on desktop, cards on mobile */
+    .items-cards {
+      display: none;
+    }
+
+    /* Mobile tweaks */
+    @media (max-width: 575px) {
+      body {
+        background: #fff;
+      }
+
+      .container-lg {
+        padding-left: .5rem;
+        padding-right: .5rem;
+      }
+
+      .py-4 {
+        padding-top: .75rem !important;
+        padding-bottom: .75rem !important;
+      }
+
+      .card.shadow-sm {
+        box-shadow: none !important;
+      }
+
+      .card {
+        border-radius: 0 !important;
+        border-left: none !important;
+        border-right: none !important;
+      }
+
+      .page-header {
+        border-radius: 0;
+        padding: .85rem 1rem;
+      }
+
+      .page-header h5 {
+        font-size: 1rem;
+      }
+
+      .page-header small {
+        font-size: .72rem;
+      }
+
+      .card-body {
+        padding: .75rem;
+      }
+
+      .section-label {
+        font-size: .9rem;
+      }
+
+      /* Header action buttons: icon-only on mobile */
+      .hdr-actions .btn-label {
+        display: none;
+      }
+
+      .hdr-actions .btn {
+        padding: .3rem .55rem;
+      }
+
+      #userInfo {
+        max-width: 90px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        display: inline-block;
+        vertical-align: middle;
+      }
+
+      .filter-row .form-select-sm {
+        font-size: .8rem;
+      }
+
+      /* Detail items: hide table, show cards */
+      .items-table {
+        display: none;
+      }
+
+      .items-cards {
+        display: block;
+      }
+
+      .alert {
+        font-size: .85rem;
+        padding: .6rem .75rem;
+      }
+
+      .breakdown-header {
+        font-size: .82rem;
+        padding: .45rem .7rem;
+      }
+
+      .breakdown-body {
+        padding: .4rem .7rem;
+      }
+
+      /* Detail modal full-screen on mobile */
+      #detailModal .modal-dialog {
+        margin: 0;
+        max-width: 100%;
+        height: 100%;
+      }
+
+      #detailModal .modal-content {
+        height: 100%;
+        border-radius: 0;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Auth guard -->
+  <script>
+    (async () => {
+      try {
+        const r = await fetch('/api/auth/me');
+        if (!r.ok) { window.location.replace('/login.html'); return; }
+        const u = await r.json();
+        if (u.role !== 'submitter') { window.location.replace('/approve.html'); return; }
+        document.getElementById('userInfo').textContent = `${u.fullName} (${u.employeeId})`;
+        window._userBranch = (u.branch || '').trim();
+      } catch { window.location.replace('/login.html'); }
+    })();
+    async function logout() {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      window.location.replace('/login.html');
+    }
+  </script>
+  <div class="container-lg py-4">
+
+    <!-- Header -->
+    <div class="card shadow-sm mb-4">
+      <div class="page-header app-topbar">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 app-topbar-inner py-1">
+          <div class="flex-grow-1" style="min-width:0">
+            <h5 class="mb-0"><i class="fas fa-search me-2"></i>ติดตามสถานะ / บันทึกสถานที่ทิ้ง</h5>
+            <small class="opacity-75">ผู้ส่งเรื่อง — ตรวจสอบสถานะและบันทึกสถานที่ทิ้งรอขาย</small>
+          </div>
+          <div class="d-flex align-items-center gap-2 hdr-actions flex-wrap app-nav-actions">
+            <span class="app-page-chip"><i class="fas fa-location-dot"></i>หน้าติดตามสถานะ</span>
+            <a href="/" class="btn btn-outline-light btn-sm app-nav-btn" title="ส่งฟอร์มใหม่">
+              <i class="fas fa-plus"></i><span class="btn-label ms-1">ส่งฟอร์มใหม่</span>
+            </a>
+            <span class="app-user-chip" id="userInfo"><i class="fas fa-user"></i>กำลังโหลด...</span>
+            <button class="btn btn-outline-light btn-sm app-nav-btn" onclick="logout()" title="ออกจากระบบ">
+              <i class="fas fa-sign-out-alt"></i><span class="btn-label ms-1">ออกจากระบบ</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- My submissions list -->
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2 filter-row">
+          <p class="section-label mb-0"><i class="fas fa-list me-1"></i>ฟอร์มที่ฉันส่งแล้ว</p>
+          <div class="d-flex gap-2">
+            <select class="form-select form-select-sm" id="filterStatus" onchange="filterList()" style="width:auto">
+              <option value="">ทุกสถานะ</option>
+              <option value="pending">รออนุมัติ</option>
+              <option value="approved">อนุมัติแล้ว</option>
+              <option value="rejected">ปฏิเสธ</option>
+              <option value="completed">เสร็จสิ้น</option>
+            </select>
+            <button class="btn btn-outline-secondary btn-sm" onclick="loadMySubmissions()" title="รีเฟรช">
+              <i class="fas fa-sync-alt"></i><span class="btn-label ms-1">รีเฟรช</span>
+            </button>
+          </div>
+        </div>
+        <div id="submissionList">
+          <div class="text-center text-muted py-4">
+            <div class="spinner-border spinner-border-sm me-2"></div>กำลังโหลด...
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Detail Modal -->
+  <div class="modal fade" id="detailModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-scrollable modal-lg">
+      <div class="modal-content">
+        <div class="modal-header py-2">
+          <h6 class="modal-title fw-bold" id="detailModalTitle">รายละเอียด</h6>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body p-2 p-sm-3" id="detailModalBody">
+          <div class="text-center py-4">
+            <div class="spinner-border text-primary"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Image viewer -->
+  <div class="modal fade" id="imgModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content">
+        <div class="modal-body p-0 text-center bg-dark">
+          <img id="imgSrc" src="" class="img-fluid" style="max-height:80vh">
+        </div>
+        <div class="modal-footer"><button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">ปิด</button></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/nav-unified.js"></script>
+  <script>
+    const DISPOSAL_OPTIONS = {
+      'Y5': ['จุดทิ้งลานบริเวณข้างห้องน้ำฝ่ายผลิต'],
+      'Y8': ['จุดทิ้งลานทิ้งเศษลวดรอขาย หลังปั๊มน้ำมัน'],
+      'Y11': ['จุดทิ้งที่ 1 ท้ายโรงงาน C', 'จุดทิ้งที่ 2 ข้างโรงงาน A'],
+    };
+
+    function buildDisposalSelect() {
+      const branch = (window._userBranch || '').toUpperCase();
+      const opts = DISPOSAL_OPTIONS[branch];
+      if (!opts) {
+        return `<input type="text" class="form-control" id="disposalLocation"
+      placeholder="ระบุสถานที่ทิ้ง เช่น โกดัง A ห้อง B" maxlength="200">`;
+      }
+      let html = `<select class="form-select" id="disposalLocation" required>
+    <option value="">— เลือกจุดทิ้ง —</option>`;
+      opts.forEach(o => { html += `<option value="${esc(o)}">${esc(o)}</option>`; });
+      html += `</select>`;
+      return html;
+    }
+
+    const TYPE_LABELS = {
+      thin_1: 'เศษลวดหัวแบ่ง', thin_2: 'สายแพ็คเหล็ก', thin_3: 'เศษลวดปลอก',
+      thin_4: 'ลวดผูกเหล็กรัดลวดปลอก',
+      thick_1: 'เศษเหล็กโดเวล',
+      thick_2: 'เหล็กรูปพรรณเศษชิ้นส่วนเครื่องจักร/เศษเหล็กเพลท',
+      special_1: 'เศษเหล็กแผ่นจากการตัดเพลทเครื่องตัดพลาสม่า',
+    };
+    const STATUS_TH = { pending: 'รออนุมัติ', approved: 'อนุมัติแล้ว — รอบันทึกสถานที่ทิ้ง', rejected: 'ปฏิเสธ', completed: 'เสร็จสิ้น (ล็อกแล้ว)' };
+    const STATUS_SHORT = { pending: 'รออนุมัติ', approved: 'อนุมัติแล้ว', rejected: 'ปฏิเสธ', completed: 'เสร็จสิ้น' };
+    const STATUS_CLASS = { pending: 'status-pending', approved: 'status-approved', rejected: 'status-rejected', completed: 'status-completed' };
+
+    let allSubmissions = [];
+
+    // ─── On load ─────────────────────────────────────────────────────────────────
+    window.addEventListener('DOMContentLoaded', () => {
+      loadMySubmissions();
+      const params = new URLSearchParams(location.search);
+      const id = params.get('id');
+      if (id) loadById(id);
+    });
+
+    async function loadMySubmissions() {
+      const listEl = document.getElementById('submissionList');
+      listEl.innerHTML = '<div class="text-center text-muted py-4"><div class="spinner-border spinner-border-sm me-2"></div>กำลังโหลด...</div>';
+      try {
+        const res = await fetch('/api/submissions');
+        if (!res.ok) throw new Error();
+        allSubmissions = await res.json();
+        renderList(allSubmissions);
+      } catch {
+        listEl.innerHTML = '<div class="alert alert-danger py-2 small">โหลดข้อมูลไม่สำเร็จ</div>';
+      }
+    }
+
+    function filterList() {
+      const status = document.getElementById('filterStatus').value;
+      const filtered = status ? allSubmissions.filter(s => s.status === status) : allSubmissions;
+      renderList(filtered);
+    }
+
+    function renderList(list) {
+      const listEl = document.getElementById('submissionList');
+      if (list.length === 0) {
+        listEl.innerHTML = '<div class="text-center text-muted py-4"><i class="fas fa-inbox fa-2x mb-2 d-block"></i>ยังไม่มีรายการ</div>';
+        return;
+      }
+      const rows = list.map(s => {
+        const totalW = (s.items || []).reduce((a, b) => a + (b.weight || 0), 0);
+        const dt = new Date(s.submittedAt).toLocaleString('th-TH', { day: 'numeric', month: 'short', year: '2-digit', hour: '2-digit', minute: '2-digit' });
+        const needAction = s.status === 'approved' ? '<span class="badge bg-warning text-dark small">รอบันทึก</span>' : '';
+        return `
+      <div class="sub-item" onclick="loadById('${s.id}')">
+        <div class="d-flex justify-content-between align-items-start gap-2">
+          <div style="min-width:0;flex:1">
+            <span class="sub-id">${s.id.substring(0, 8).toUpperCase()}…</span>
+            <div class="fw-semibold" style="font-size:.9rem;line-height:1.25">${esc(s.collectorName)} <span class="text-muted fw-normal">— สาขา ${esc(s.branch || '–')}</span></div>
+            <div class="sub-meta-row mt-1">
+              <span><i class="far fa-clock me-1"></i>${dt}</span>
+              <span class="sub-weight">${totalW.toFixed(1)} กก.</span>
+            </div>
+          </div>
+          <div class="d-flex flex-column align-items-end gap-1" style="flex-shrink:0">
+            <span class="badge ${STATUS_CLASS[s.status]} rounded-pill px-2">${STATUS_SHORT[s.status] || s.status}</span>
+            ${needAction}
+          </div>
+        </div>
+      </div>`;
+      }).join('');
+      listEl.innerHTML = `<div class="border rounded">${rows}</div>`;
+    }
+
+    async function loadById(id) {
+      if (!id) return;
+      const body = document.getElementById('detailModalBody');
+      const titleEl = document.getElementById('detailModalTitle');
+      body.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-primary"></div></div>';
+      titleEl.textContent = 'กำลังโหลด...';
+      const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('detailModal'));
+      modal.show();
+      try {
+        const res = await fetch(`/api/submissions/${encodeURIComponent(id)}`);
+        if (!res.ok) {
+          body.innerHTML = `<div class="alert alert-danger"><i class="fas fa-exclamation-triangle me-2"></i>ไม่พบข้อมูล</div>`;
+          return;
+        }
+        const s = await res.json();
+        titleEl.textContent = `${s.collectorName} — สาขา ${s.branch}`;
+        renderDetail(s);
+      } catch {
+        body.innerHTML = `<div class="alert alert-danger">ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้</div>`;
+      }
+    }
+
+    function renderDetail(s) {
+      const area = document.getElementById('detailModalBody');
+      document.getElementById('detailModalTitle').textContent = `${s.collectorName} — สาขา ${s.branch}`;
+      const totalWeight = (s.items || []).reduce((sum, it) => sum + (it.weight || 0), 0);
+
+      // Breakdown
+      const bd = s.typeBreakdown || {};
+      let bdHtml = '';
+      for (const [key, g] of Object.entries(bd)) {
+        if (!g || g.totalWeight === 0) continue;
+        const subtypesHtml = Object.entries(g.subtypes || {}).map(([, info]) =>
+          `<div class="subtype-row"><span>${esc(info.label)}</span><span class="fw-semibold">${info.weight.toFixed(2)} กก.</span></div>`
+        ).join('');
+        bdHtml += `
+      <div class="breakdown-group">
+        <div class="breakdown-header ${key}">
+          <span><i class="fas fa-layer-group me-1"></i>${esc(g.label)}</span>
+          <span>${g.totalWeight.toFixed(2)} กก.</span>
+        </div>
+        <div class="breakdown-body">${subtypesHtml}</div>
+      </div>`;
+      }
+
+      // Helper: render small thumb if a filename exists
+      const thumbImg = (fn, label) => fn
+        ? `<div class="d-inline-block text-center me-1"><img src="/uploads/${esc(fn)}" class="thumb" onclick="viewImg('/uploads/${esc(fn)}')"><div class="small text-muted" style="font-size:.65rem">${label}</div></div>`
+        : '';
+
+      // Items table (desktop)
+      const itemsHtml = (s.items || []).map((it, i) => {
+        const photos = (it.ocrPhoto || it.weighingPhoto)
+          ? `${thumbImg(it.ocrPhoto, 'OCR')}${thumbImg(it.weighingPhoto, 'รูปถ่าย')}`
+          : '<span class="text-muted">–</span>';
+        return `
+    <tr>
+      <td>${i + 1}</td>
+      <td>${esc(formatDate(it.date))}</td>
+      <td>${esc(it.scrapArea)}</td>
+      <td><span class="badge bg-secondary" style="font-size:.75rem">${esc(TYPE_LABELS[it.scrapType] || it.scrapType)}</span></td>
+      <td class="text-end fw-semibold">${it.weight.toFixed(1)}</td>
+      <td>${it.bringer ? esc(it.bringer) : '<span class="text-muted">–</span>'}</td>
+      <td class="text-nowrap">${photos}</td>
+    </tr>`;
+      }).join('');
+
+      // Items cards (mobile)
+      const itemCardsHtml = (s.items || []).map((it, i) => {
+        const mThumb = (fn, label) => fn
+          ? `<div class="d-inline-block text-center mx-1"><img src="/uploads/${esc(fn)}" class="thumb" style="max-height:120px" onclick="viewImg('/uploads/${esc(fn)}')"><div class="small text-muted" style="font-size:.7rem">${label}</div></div>`
+          : '';
+        const photoBlock = (it.ocrPhoto || it.weighingPhoto)
+          ? `<div class="mt-2 text-center">${mThumb(it.ocrPhoto, 'OCR ตาชั่ง')}${mThumb(it.weighingPhoto, 'รูปถ่าย')}</div>`
+          : '';
+        return `
+    <div class="item-card-m">
+      <div class="ic-head">
+        <span><span class="ic-num">${i + 1}</span> <span class="badge bg-secondary ms-1" style="font-size:.7rem">${esc(TYPE_LABELS[it.scrapType] || it.scrapType)}</span></span>
+        <span class="ic-w">${it.weight.toFixed(1)} กก.</span>
+      </div>
+      <div class="ic-row"><span class="lbl">วันที่</span><span class="val">${esc(formatDate(it.date))}</span></div>
+      <div class="ic-row"><span class="lbl">พื้นที่</span><span class="val">${esc(it.scrapArea || '–')}</span></div>
+      ${it.bringer ? `<div class="ic-row"><span class="lbl">ผู้นำมา</span><span class="val">${esc(it.bringer)}</span></div>` : ''}
+      ${photoBlock}
+    </div>`;
+      }).join('');
+
+      // Status-specific section
+      let actionSection = '';
+      if (s.status === 'pending') {
+        actionSection = `
+      <div class="alert alert-warning d-flex align-items-start gap-2 mt-3">
+        <i class="fas fa-hourglass-half fa-lg mt-1"></i>
+        <div>
+          <strong>รอการอนุมัติ</strong><br>
+          <small>ส่งฟอร์มเมื่อ ${new Date(s.submittedAt).toLocaleString('th-TH')} — กรุณารอผู้อนุมัติดำเนินการ</small>
+        </div>
+      </div>`;
+      } else if (s.status === 'rejected') {
+        actionSection = `
+      <div class="alert alert-danger d-flex align-items-start gap-2 mt-3">
+        <i class="fas fa-times-circle fa-lg mt-1"></i>
+        <div>
+          <strong>ปฏิเสธแล้ว</strong>
+          ${s.rejectionReason ? `<br><strong>เหตุผล:</strong> ${esc(s.rejectionReason)}` : ''}
+          <br><small>${new Date(s.approvedAt).toLocaleString('th-TH')}</small>
+        </div>
+      </div>`;
+      } else if (s.status === 'approved') {
+        actionSection = `
+      <div class="alert alert-primary d-flex align-items-start gap-2 mt-3 mb-3">
+        <i class="fas fa-check-circle fa-lg mt-1"></i>
+        <div>
+          <strong>อนุมัติแล้ว</strong> โดย ${esc(s.approvedBy)}<br>
+          <small>${new Date(s.approvedAt).toLocaleString('th-TH')}</small><br>
+          <span class="text-primary fw-semibold">กรุณาบันทึกสถานที่ทิ้งรอขายด้านล่าง</span>
+        </div>
+      </div>
+
+      <div class="card border-primary">
+        <div class="card-header bg-primary text-white fw-semibold">
+          <i class="fas fa-map-marker-alt me-2"></i>บันทึกสถานที่ทิ้งรอขาย
+          <small class="ms-2 opacity-75">(เมื่อบันทึกแล้ว จะล็อกไม่สามารถแก้ไขได้)</small>
+        </div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">สถานที่ทิ้งรอขาย <span class="text-danger">*</span></label>
+            ${buildDisposalSelect()}
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">
+              <i class="fas fa-camera me-1 text-secondary"></i>รูปถ่ายสถานที่ทิ้ง
+            </label>
+            <input type="file" class="form-control" id="disposalPhoto"
+              accept="image/*" capture="environment" onchange="previewDisposal(this)">
+            <div id="disposalPreview" class="mt-2"></div>
+          </div>
+          <button class="btn btn-primary w-100" onclick="submitDisposal('${s.id}')">
+            <i class="fas fa-lock me-2"></i>บันทึกและล็อกรายการ
+          </button>
+        </div>
+      </div>`;
+      } else if (s.status === 'completed') {
+        actionSection = `
+      <div class="alert alert-success mt-3">
+        <div class="d-flex align-items-center gap-2 mb-2">
+          <i class="fas fa-lock fa-lg"></i>
+          <strong class="lock-badge">เสร็จสิ้น — รายการนี้ล็อกแล้ว ไม่สามารถแก้ไขได้</strong>
+        </div>
+        <table class="table table-sm mb-0 bg-white rounded">
+          <tr><td class="text-muted" width="160">อนุมัติโดย</td><td class="fw-semibold">${esc(s.approvedBy)}</td></tr>
+          <tr><td class="text-muted">สถานที่ทิ้ง</td><td class="fw-semibold">${esc(s.disposalLocation || '–')}</td></tr>
+          <tr><td class="text-muted">บันทึกเมื่อ</td><td>${s.disposalSubmittedAt ? new Date(s.disposalSubmittedAt).toLocaleString('th-TH') : '–'}</td></tr>
+        </table>
+        ${s.disposalPhoto ? `
+          <div class="mt-2">
+            <p class="small text-muted mb-1">รูปถ่ายสถานที่ทิ้ง</p>
+            <img src="/uploads/${esc(s.disposalPhoto)}" class="thumb" style="max-height:120px"
+              onclick="viewImg('/uploads/${esc(s.disposalPhoto)}')">
+          </div>` : ''}
+      </div>`;
+      }
+
+      area.innerHTML = `
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+      <div>
+        <div class="small text-muted">
+          ${s.department ? `แผนก ${esc(s.department)}` : ''}
+          ${s.position ? ` | ตำแหน่ง ${esc(s.position)}` : ''}
+        </div>
+        <div class="small text-muted">ส่งเมื่อ ${new Date(s.submittedAt).toLocaleString('th-TH')}</div>
+      </div>
+      <span class="badge rounded-pill px-3 py-2 ${STATUS_CLASS[s.status]}">${STATUS_TH[s.status]}</span>
+    </div>
+
+    <p class="section-label"><i class="fas fa-chart-bar me-1"></i>สรุปน้ำหนักรายประเภท</p>
+    ${bdHtml || '<p class="text-muted">ไม่มีข้อมูลประเภท</p>'}
+
+    <p class="section-label mt-3"><i class="fas fa-list me-1"></i>รายการเศษเหล็ก (รวม ${totalWeight.toFixed(1)} กก.)</p>
+    <div class="table-responsive mb-0 items-table">
+      <table class="table table-sm table-bordered align-middle mb-0">
+        <thead class="table-dark">
+          <tr><th>#</th><th>วันที่</th><th>พื้นที่</th><th>ประเภท</th><th>น้ำหนัก (กก.)</th><th>ผู้นำมา</th><th>รูปถ่าย</th></tr>
+        </thead>
+        <tbody>${itemsHtml}</tbody>
+      </table>
+    </div>
+    <div class="items-cards">${itemCardsHtml}</div>
+
+    ${actionSection}`;
+    }
+
+    async function submitDisposal(id) {
+      const location = (document.getElementById('disposalLocation').value || '').trim();
+      if (!location) { alert('กรุณาระบุสถานที่ทิ้ง'); return; }
+
+      if (!confirm('เมื่อบันทึกแล้วจะไม่สามารถแก้ไขได้ ยืนยันหรือไม่?')) return;
+
+      const fd = new FormData();
+      fd.append('disposalLocation', location);
+      const photoFile = document.getElementById('disposalPhoto').files[0];
+      if (photoFile) fd.append('disposalPhoto', photoFile);
+
+      const btn = document.querySelector(`button[onclick="submitDisposal('${id}')"]`);
+      if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>กำลังบันทึก...'; }
+
+      try {
+        const res = await fetch(`/api/submissions/${id}/complete`, { method: 'POST', body: fd });
+        const data = await res.json();
+        if (data.success) {
+          // Reload list + re-render detail in modal
+          await loadMySubmissions();
+          const fresh = await fetch(`/api/submissions/${id}`).then(r => r.json());
+          renderDetail(fresh);
+        } else {
+          alert(data.error || 'เกิดข้อผิดพลาด');
+          if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-lock me-2"></i>บันทึกและล็อกรายการ'; }
+        }
+      } catch {
+        alert('ไม่สามารถเชื่อมต่อได้');
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-lock me-2"></i>บันทึกและล็อกรายการ'; }
+      }
+    }
+
+    function previewDisposal(input) {
+      const p = document.getElementById('disposalPreview');
+      if (!input.files || !input.files[0]) { p.innerHTML = ''; return; }
+      const url = URL.createObjectURL(input.files[0]);
+      p.innerHTML = `<img src="${url}" class="thumb">`;
+    }
+
+    function viewImg(src) {
+      document.getElementById('imgSrc').src = src;
+      new bootstrap.Modal(document.getElementById('imgModal')).show();
+    }
+
+    function getSaved() {
+      try { return JSON.parse(localStorage.getItem('mySubmissions') || '[]'); }
+      catch { return []; }
+    }
+
+    function esc(str) {
+      return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    function formatDate(d) {
+      if (!d) return '–';
+      try { const [y, m, day] = d.split('-'); return `${day}/${m}/${y}`; } catch { return d; }
+    }
+  </script>
+</body>
+
+</html>

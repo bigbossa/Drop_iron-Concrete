@@ -1,0 +1,154 @@
+:root {
+  --nav-bg-start: #123455;
+  --nav-bg-end: #1f5f9b;
+  --nav-border: rgba(255, 255, 255, 0.28);
+  --nav-chip-bg: rgba(255, 255, 255, 0.14);
+  --nav-chip-text: #eaf4ff;
+}
+
+.app-topbar {
+  background: linear-gradient(135deg, var(--nav-bg-start), var(--nav-bg-end));
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.app-topbar-inner {
+  min-height: 60px;
+}
+
+.app-brand {
+  color: #fff;
+  text-decoration: none;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.app-brand:hover {
+  color: #fff;
+  opacity: 0.95;
+}
+
+.app-user-chip,
+.app-page-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: 999px;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.76rem;
+  color: var(--nav-chip-text);
+  background: var(--nav-chip-bg);
+  border: 1px solid var(--nav-border);
+  white-space: nowrap;
+}
+
+.app-page-chip {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+  font-weight: 600;
+}
+
+.app-user-role {
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.app-user-name {
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.app-nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.app-nav-btn {
+  border-color: rgba(255, 255, 255, 0.86);
+  color: #fff;
+  background: transparent;
+  font-size: 0.82rem;
+  line-height: 1.1;
+}
+
+.app-nav-btn:hover,
+.app-nav-btn:focus {
+  color: #123455;
+  background: #fff;
+  border-color: #fff;
+}
+
+.app-nav-btn.is-active {
+  color: #123455;
+  background: #fff;
+  border-color: #fff;
+  font-weight: 600;
+}
+
+.app-nav-btn.app-nav-primary {
+  background: #fff;
+  border-color: #fff;
+  color: #123455;
+  font-weight: 700;
+  box-shadow: 0 4px 12px rgba(10, 29, 47, 0.24);
+}
+
+.app-nav-btn.app-nav-primary:hover,
+.app-nav-btn.app-nav-primary:focus {
+  background: #fff;
+  color: #0f2e4a;
+  border-color: #fff;
+}
+
+.app-nav-menu {
+  min-width: 190px;
+  border-radius: 10px;
+  border: 1px solid #d8e4f1;
+  box-shadow: 0 10px 24px rgba(14, 42, 71, 0.2);
+}
+
+.app-nav-menu .dropdown-item {
+  font-size: 0.84rem;
+}
+
+.app-nav-menu .dropdown-item.active,
+.app-nav-menu .dropdown-item:active {
+  background: #1f5f9b;
+  color: #fff;
+}
+
+.tooltip .tooltip-inner {
+  font-size: 0.74rem;
+  padding: 0.34rem 0.5rem;
+  border-radius: 6px;
+}
+
+@media (max-width: 575px) {
+  .app-topbar-inner {
+    min-height: 52px;
+  }
+
+  .app-brand span {
+    display: none;
+  }
+
+  .app-user-chip,
+  .app-page-chip {
+    max-width: 130px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .app-user-role {
+    display: none;
+  }
+
+  .app-nav-btn .btn-label {
+    display: none;
+  }
+}
