@@ -9,6 +9,7 @@
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link href="/nav-unified.css" rel="stylesheet">
+  <link href="/executive-theme.css" rel="stylesheet">
   <style>
     body {
       background: #eef2f7;
@@ -113,6 +114,16 @@
     .breakdown-header.special {
       background: #fce4ec;
       color: #880e4f;
+    }
+
+    .breakdown-header.concrete_general {
+      background: #eef2ff;
+      color: #3730a3;
+    }
+
+    .breakdown-header.concrete_quality {
+      background: #f0fdf4;
+      color: #166534;
     }
 
     .breakdown-body {
@@ -284,14 +295,23 @@
   <!-- Auth guard -->
   <script>
     let _currentUserName = '';
+    let _isExRole = false;
     (async () => {
       try {
         const r = await fetch('/api/auth/me');
         if (!r.ok) { window.location.replace('/login.html'); return; }
         const u = await r.json();
-        if (u.role !== 'approver') { window.location.replace('/'); return; }
+        if (!['approver', 'ex'].includes(u.role)) { window.location.replace('/'); return; }
+        _isExRole = u.role === 'ex';
         _currentUserName = u.fullName || '';
         document.getElementById('userInfo').textContent = `${u.fullName} (${u.employeeId})`;
+        const saleSection = document.getElementById('saleApprovalSection');
+        if (saleSection && !_isExRole) saleSection.classList.add('d-none');
+        if (_isExRole) {
+          const subTitle = document.querySelector('.page-header small');
+          if (subTitle) subTitle.textContent = 'Executive — อนุมัติ / ปฏิเสธเฉพาะรายการขายออก';
+        }
+        await loadData();
       } catch { window.location.replace('/login.html'); }
     })();
     async function logout() {
@@ -313,7 +333,7 @@
             <a href="/history.html" class="btn btn-outline-light btn-sm app-nav-btn" title="ประวัติเข้า-ออกเหล็ก">
               <i class="fas fa-exchange-alt"></i><span class="btn-label ms-1">ประวัติ</span>
             </a>
-            <a href="/dashboard.html" class="btn btn-outline-light btn-sm app-nav-btn" title="Dashboard">
+            <a href="/dashboard.html" id="dashboardLink" class="btn btn-outline-light btn-sm app-nav-btn" title="Dashboard">
               <i class="fas fa-chart-line"></i><span class="btn-label ms-1">แดชบอร์ด</span>
             </a>
             <span class="app-user-chip" id="userInfo"><i class="fas fa-user-shield"></i>กำลังโหลด...</span>
@@ -361,7 +381,7 @@
       </div>
     </div>
 
-    <div class="card shadow-sm mb-4">
+    <div class="card shadow-sm mb-4" id="saleApprovalSection">
       <div class="card-body">
         <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
           <p class="section-label mb-0"><i class="fas fa-coins me-1"></i>อนุมัติการขายเศษเหล็ก</p>
@@ -482,9 +502,21 @@
       thick_1: 'เศษเหล็กโดเวล',
       thick_2: 'เหล็กรูปพรรณเศษชิ้นส่วนเครื่องจักร/เศษเหล็กเพลท',
       special_1: 'เศษเหล็กแผ่นจากการตัดเพลทเครื่องตัดพลาสม่า',
+      concrete_plant: 'เศษคอนกรีตจากโรงงานผลิต',
+      concrete_factory_product_test: 'เศษผลิตภัณฑ์คอนกรีตในโรงงานและเศษจากผลิตภัณฑ์ที่ทำการทดสอบ/เทส',
+      concrete_site_defect: 'เศษผลิตภัณฑ์ชำรุดหน้างาน',
+      concrete_wrong_spec: 'เศษผลิตภัณฑ์ที่ผิดแปลสภาพ',
+      concrete_transfer: 'เศษคอนกรีตระหว่างขนส่งและลำเลียง',
+      concrete_site: 'เศษคอนกรีตบริเวณหน้างาน',
+      concrete_structure: 'เศษคอนกรีตจากงานรื้อ/ซ่อมโครงสร้าง',
+      concrete_cube: 'ลูกปูนเทสต์ (คิวบ์เทสต์)',
+      concrete_sludge: 'เศษงานสลัดจ์',
+      concrete_grind: 'เศษงานเจียร/สกัดคอนกรีต',
       thin: 'เหล็กบาง',
       thick: 'เหล็กหนา',
       special: 'เหล็กหนาพิเศษ',
+      concrete_general: 'คอนกรีตทั่วไป',
+      concrete_quality: 'คอนกรีตทดสอบ/งานซ่อม',
     };
     const STATUS_TH = { pending: 'รออนุมัติ', approved: 'อนุมัติแล้ว', rejected: 'ปฏิเสธ', completed: 'เสร็จสิ้น' };
     const STATUS_CLASS = { pending: 'status-pending', approved: 'status-approved', rejected: 'status-rejected', completed: 'status-completed' };
@@ -500,8 +532,20 @@
       rejected_by_approver: 'status-rejected',
       confirmed_by_managerial: 'status-completed',
     };
-    const GROUP_COLORS = { thin: '#084298', thick: '#7c4d00', special: '#880e4f' };
-    const GROUP_BG = { thin: '#e7f3ff', thick: '#fff3e0', special: '#fce4ec' };
+    const GROUP_COLORS = {
+      thin: '#084298',
+      thick: '#7c4d00',
+      special: '#880e4f',
+      concrete_general: '#3730a3',
+      concrete_quality: '#166534',
+    };
+    const GROUP_BG = {
+      thin: '#e7f3ff',
+      thick: '#fff3e0',
+      special: '#fce4ec',
+      concrete_general: '#eef2ff',
+      concrete_quality: '#f0fdf4',
+    };
 
     let allData = [], currentFilter = 'all', activeId = null;
     let saleData = [];
@@ -533,23 +577,32 @@
 
     async function loadData() {
       try {
-        const [submissionsRes, salesRes] = await Promise.all([
-          fetch('/api/submissions'),
-          fetch('/api/sales')
-        ]);
-        allData = await submissionsRes.json();
-        saleData = salesRes.ok ? await salesRes.json() : [];
+        if (_isExRole) {
+          const salesRes = await fetch('/api/sales');
+          saleData = salesRes.ok ? await salesRes.json() : [];
+          allData = [];
+        } else {
+          saleData = [];
+          const submissionsRes = await fetch('/api/submissions');
+          allData = submissionsRes.ok ? await submissionsRes.json() : [];
+        }
+
         updateCounters();
         renderList();
-        renderSaleCounters();
-        renderSaleApprovals();
+        if (_isExRole) {
+          renderSaleCounters();
+          renderSaleApprovals();
+        }
       } catch {
         document.getElementById('listContainer').innerHTML = '<div class="alert alert-danger">ไม่สามารถโหลดข้อมูลได้</div>';
-        document.getElementById('saleApprovalList').innerHTML = '<div class="alert alert-danger py-2 mb-0">ไม่สามารถโหลดรายการขายได้</div>';
+        if (_isExRole) {
+          document.getElementById('saleApprovalList').innerHTML = '<div class="alert alert-danger py-2 mb-0">ไม่สามารถโหลดรายการขายได้</div>';
+        }
       }
     }
 
     async function loadSaleApprovals() {
+      if (!_isExRole) return;
       try {
         const res = await fetch('/api/sales');
         saleData = res.ok ? await res.json() : [];
@@ -606,8 +659,10 @@
               </div>
               <div class="d-flex gap-1 mt-2 justify-content-end">
                 ${s.status === 'pending_approval'
-            ? `<button class="btn btn-danger btn-sm" onclick="rejectSale('${s.id}')"><i class="fas fa-times me-1"></i>ปฏิเสธ</button>
+            ? (_isExRole
+              ? `<button class="btn btn-danger btn-sm" onclick="rejectSale('${s.id}')"><i class="fas fa-times me-1"></i>ปฏิเสธ</button>
                      <button class="btn btn-success btn-sm" onclick="approveSale('${s.id}')"><i class="fas fa-check me-1"></i>อนุมัติ</button>`
+              : '<span class="text-muted small">เฉพาะ Executive อนุมัติขายได้</span>')
             : ''}
               </div>
             </div>
@@ -879,7 +934,6 @@
       try { const [y, m, day] = d.split('-'); return `${day}/${m}/${y}`; } catch { return d; }
     }
 
-    loadData();
   </script>
 </body>
 

@@ -33,12 +33,19 @@ router.post('/users', requireLogin, requireRole('superadmin'), async (req, res) 
   try {
     const { pool } = req.app.locals;
     const { employeeId, password, fullName, role, branch, department, position } = req.body;
+    const normalizedRole = String(role || '').trim().toLowerCase();
+    const resolvedRole = (
+      normalizedRole === 'executive'
+      || normalizedRole.startsWith('executive ')
+      || normalizedRole.includes('อนุมัติขายออก')
+      || normalizedRole === 'ex'
+    ) ? 'ex' : normalizedRole;
 
     if (!employeeId || !password || !fullName || !role) {
       return res.status(400).json({ error: 'กรุณากรอกข้อมูลที่จำเป็นให้ครบ' });
     }
 
-    if (!['submitter', 'approver', 'superadmin', 'managerial'].includes(role)) {
+    if (!['submitter', 'approver', 'superadmin', 'managerial', 'ex'].includes(resolvedRole)) {
       return res.status(400).json({ error: 'role ไม่ถูกต้อง' });
     }
 
@@ -54,7 +61,7 @@ router.post('/users', requireLogin, requireRole('superadmin'), async (req, res) 
         employeeId.trim(),
         hash,
         fullName.trim(),
-        role,
+        resolvedRole,
         (branch || '').trim() || null,
         (department || '').trim() || null,
         (position || '').trim() || null,
@@ -74,11 +81,20 @@ router.put('/users/:id', requireLogin, requireRole('superadmin'), async (req, re
   try {
     const { pool } = req.app.locals;
     const { fullName, role, branch, department, position, password, isActive } = req.body;
+    const normalizedRole = role === undefined ? undefined : String(role).trim().toLowerCase();
+    const resolvedRole = normalizedRole === undefined
+      ? undefined
+      : (
+        normalizedRole === 'executive'
+        || normalizedRole.startsWith('executive ')
+        || normalizedRole.includes('อนุมัติขายออก')
+        || normalizedRole === 'ex'
+      ) ? 'ex' : normalizedRole;
 
     const uid = parseInt(req.params.id, 10);
     if (Number.isNaN(uid)) return res.status(400).json({ error: 'id ไม่ถูกต้อง' });
 
-    if (role && !['submitter', 'approver', 'superadmin', 'managerial'].includes(role)) {
+    if (resolvedRole && !['submitter', 'approver', 'superadmin', 'managerial', 'ex'].includes(resolvedRole)) {
       return res.status(400).json({ error: 'role ไม่ถูกต้อง' });
     }
 
@@ -86,7 +102,7 @@ router.put('/users/:id', requireLogin, requireRole('superadmin'), async (req, re
     const values = [];
 
     if (fullName !== undefined) { fields.push(`full_name=$${values.length + 1}`); values.push(fullName.trim()); }
-    if (role !== undefined) { fields.push(`role=$${values.length + 1}`); values.push(role); }
+    if (resolvedRole !== undefined) { fields.push(`role=$${values.length + 1}`); values.push(resolvedRole); }
     if (branch !== undefined) { fields.push(`branch=$${values.length + 1}`); values.push(branch.trim() || null); }
     if (department !== undefined) { fields.push(`department=$${values.length + 1}`); values.push(department.trim() || null); }
     if (position !== undefined) { fields.push(`position=$${values.length + 1}`); values.push(position.trim() || null); }

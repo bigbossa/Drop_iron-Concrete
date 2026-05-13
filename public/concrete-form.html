@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>แบบฟอร์มบันทึกการเก็บเศษเหล็ก</title>
+  <title>แบบฟอร์มบันทึกการเก็บเศษคอนกรีต</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -351,9 +351,9 @@
     <div class="container-lg d-flex justify-content-between align-items-center app-topbar-inner py-2">
       <a class="app-brand" href="/"><i class="fas fa-recycle"></i><span>Iron Drop</span></a>
       <div class="app-nav-actions">
-        <span class="app-page-chip"><i class="fas fa-file-alt"></i>หน้าบันทึก</span>
-        <a href="/concrete-form.html" class="btn btn-sm btn-outline-light app-nav-btn"><i class="fas fa-mountain me-1"></i><span
-          class="btn-label">ฟอร์มคอนกรีต</span></a>
+        <span class="app-page-chip"><i class="fas fa-file-alt"></i>หน้าบันทึกคอนกรีต</span>
+        <a href="/" class="btn btn-sm btn-outline-light app-nav-btn"><i class="fas fa-industry me-1"></i><span
+          class="btn-label">ฟอร์มเศษเหล็ก</span></a>
         <a href="/status.html" class="btn btn-sm btn-outline-light app-nav-btn"><i class="fas fa-list-ul me-1"></i><span
             class="btn-label">ติดตามสถานะ</span></a>
         <span class="app-user-chip" id="userInfo"><i class="fas fa-user"></i>กำลังโหลด...</span>
@@ -365,7 +365,7 @@
   <div class="container-lg py-3">
     <div class="card shadow-sm" style="border-radius:10px; border:1px solid #c9d5e8;">
       <div class="page-header">
-        <h5 class="mb-0 fw-bold"><i class="fas fa-file-alt me-2"></i>แบบฟอร์มบันทึกการเก็บเศษเหล็ก</h5>
+        <h5 class="mb-0 fw-bold"><i class="fas fa-file-alt me-2"></i>แบบฟอร์มบันทึกการเก็บเศษคอนกรีต</h5>
       </div>
       <div class="card-body p-3">
 
@@ -400,7 +400,7 @@
         <input type="hidden" id="positionHidden" name="position">
 
         <!-- ─── Items section ─── -->
-        <div class="section-label mt-2"><i class="fas fa-cubes me-1"></i>รายการเศษเหล็ก</div>
+        <div class="section-label mt-2"><i class="fas fa-cubes me-1"></i>รายการเศษคอนกรีต</div>
         <div id="itemsContainer"></div>
 
         <button type="button" class="btn btn-outline-primary btn-sm w-100 mb-3" onclick="addRow()">
@@ -572,13 +572,12 @@
 
     const TYPE_OPTIONS = [
       { value: '', label: '— เลือกประเภท —', group: '' },
-      { value: 'thin_1', label: 'เศษลวดหัวแบ่ง', group: 'เหล็กบาง' },
-      { value: 'thin_2', label: 'สายแพ็คเหล็ก', group: 'เหล็กบาง' },
-      { value: 'thin_3', label: 'เศษลวดปลอก', group: 'เหล็กบาง' },
-      { value: 'thin_4', label: 'ลวดผูกเหล็กรัดลวดปลอก', group: 'เหล็กบาง' },
-      { value: 'thick_1', label: 'เศษเหล็กโดเวล', group: 'เหล็กหนา' },
-      { value: 'thick_2', label: 'เหล็กรูปพรรณเศษชิ้นส่วนเครื่องจักร/เศษเหล็กเพลท', group: 'เหล็กหนา' },
-      { value: 'special_1', label: 'เศษเหล็กแผ่นจากการตัดเพลทเครื่องตัดพลาสม่า', group: 'เหล็กหนาพิเศษ' },
+      { value: 'concrete_plant', label: 'เศษคอนกรีตจากโรงงานผลิต', group: 'คอนกรีตทั่วไป' },
+      { value: 'concrete_factory_product_test', label: 'เศษผลิตภัณฑ์รีเจค ในโรงงานและเศษจากผลิตภัณฑ์ที่ทำการทดสอบ เทส ', group: 'คอนกรีตทั่วไป' },
+      { value: 'concrete_site_defect', label: 'เศษผลิตภัณฑ์รีเจค หน้างาน ', group: 'คอนกรีตทั่วไป' },
+      { value: 'concrete_wrong_spec', label: 'เศษผลิตภัณฑ์ที่ตัดแปรสภาพ', group: 'คอนกรีตทั่วไป' },
+      { value: 'concrete_cube', label: 'ลูกปูน แพล้น', group: 'คอนกรีตทดสอบ/งานซ่อม' },
+      { value: 'concrete_grind', label: 'เศษงานเรดีมิกซ์', group: 'คอนกรีตทดสอบ/งานซ่อม' },
     ];
 
     function buildTypeSelect(name, id) {
@@ -612,7 +611,7 @@
     <div class="row g-2 mb-2">
       <div class="col-6 col-md-3">
         <label class="form-label form-label-sm mb-1">วันที่ <span class="required">*</span></label>
-        <input type="date" class="form-control form-control-sm" name="date_${idx}" id="date_${idx}" value="${today}" required readonly>
+        <input type="date" class="form-control form-control-sm" name="date_${idx}" id="date_${idx}" value="${today}" required>
       </div>
       <div class="col-6 col-md-3">
         <label class="form-label form-label-sm mb-1">เศษจากพื้นที่ (แผนก/โรงงาน) <span class="required">*</span></label>

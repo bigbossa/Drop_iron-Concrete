@@ -16,6 +16,11 @@ const salesRoutes = require('./routes/sales');
 const ocrRoutes = require('./routes/ocr');
 
 const app = express();
+const isProd = process.env.NODE_ENV === 'production';
+
+if (isProd) {
+  app.set('trust proxy', 1);
+}
 
 app.locals.pool = pool;
 
@@ -29,6 +34,7 @@ app.use(
     cookie: {
       httpOnly: true,
       sameSite: 'lax',
+      secure: isProd,
       maxAge: 8 * 60 * 60 * 1000,
     },
   })

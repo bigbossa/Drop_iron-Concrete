@@ -19,8 +19,26 @@ async function initDb(pool) {
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS branch VARCHAR(100);`);
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS department VARCHAR(100);`);
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS position VARCHAR(100);`);
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMPTZ;`);
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_ip VARCHAR(64);`);
   await pool.query(`ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;`);
-  await pool.query(`ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('submitter','approver','superadmin','managerial'));`);
+  await pool.query(`ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('submitter','approver','superadmin','managerial','ex'));`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_users_employee_active ON users(employee_id, is_active);`);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS login_audit_logs (
+      id             SERIAL PRIMARY KEY,
+      employee_id    VARCHAR(50),
+      user_id        INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      success        BOOLEAN NOT NULL,
+      failure_reason TEXT,
+      ip_address     VARCHAR(64),
+      user_agent     TEXT,
+      created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_login_audit_employee_id ON login_audit_logs(employee_id);`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_login_audit_created_at ON login_audit_logs(created_at DESC);`);
 
   const userCount = await pool.query('SELECT COUNT(*) FROM users');
   if (parseInt(userCount.rows[0].count, 10) === 0) {
@@ -97,6 +115,7 @@ async function initDb(pool) {
       total_price   NUMERIC(12,2),
       buyer         VARCHAR(200),
       notes         TEXT,
+      sale_photo    VARCHAR(255),
       recorded_by   VARCHAR(100) NOT NULL,
       status        VARCHAR(30) NOT NULL DEFAULT 'confirmed_by_managerial',
       approved_by   VARCHAR(100),
@@ -118,6 +137,7 @@ async function initDb(pool) {
   await pool.query(`ALTER TABLE scrap_sales ADD COLUMN IF NOT EXISTS rejection_reason TEXT;`);
   await pool.query(`ALTER TABLE scrap_sales ADD COLUMN IF NOT EXISTS confirmed_by VARCHAR(100);`);
   await pool.query(`ALTER TABLE scrap_sales ADD COLUMN IF NOT EXISTS confirmed_at TIMESTAMPTZ;`);
+  await pool.query(`ALTER TABLE scrap_sales ADD COLUMN IF NOT EXISTS sale_photo VARCHAR(255);`);
 
   await pool.query(`
     UPDATE scrap_sales

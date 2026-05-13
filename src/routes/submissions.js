@@ -55,7 +55,7 @@ router.post('/submit', requireLogin, requireRole('submitter'), upload.any(), asy
 
     const items = parseItems(body, fileMap);
     if (items.length === 0) {
-      return res.status(400).json({ success: false, error: 'ต้องมีรายการเศษเหล็กอย่างน้อย 1 รายการ' });
+      return res.status(400).json({ success: false, error: 'ต้องมีรายการเศษวัสดุอย่างน้อย 1 รายการ' });
     }
 
     await client.query('BEGIN');
@@ -97,7 +97,7 @@ router.post('/submit', requireLogin, requireRole('submitter'), upload.any(), asy
   }
 });
 
-router.get('/submissions', requireLogin, async (req, res) => {
+router.get('/submissions', requireLogin, requireRole('submitter', 'approver', 'managerial', 'superadmin'), async (req, res) => {
   try {
     const { pool } = req.app.locals;
     const { status } = req.query;
@@ -151,7 +151,7 @@ router.get('/submissions', requireLogin, async (req, res) => {
   }
 });
 
-router.get('/submissions/:id', requireLogin, async (req, res) => {
+router.get('/submissions/:id', requireLogin, requireRole('submitter', 'approver', 'managerial', 'superadmin'), async (req, res) => {
   try {
     const { pool } = req.app.locals;
     const user = req.session.user;

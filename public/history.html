@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
   <link href="/nav-unified.css" rel="stylesheet">
+  <link href="/executive-theme.css" rel="stylesheet">
   <style>
     body {
       font-family: 'Prompt', sans-serif;
@@ -292,7 +293,7 @@
         const res = await fetch('/api/auth/me');
         if (!res.ok) { window.location.replace('/login.html'); return; }
         const u = await res.json();
-        if (!['approver', 'managerial', 'superadmin'].includes(u.role)) {
+        if (!['approver', 'ex', 'managerial', 'superadmin'].includes(u.role)) {
           window.location.replace('/login.html'); return;
         }
         _userRole = u.role;
@@ -300,11 +301,11 @@
         document.getElementById('userInfo').textContent = `${u.fullName} (${u.branch || u.role})`;
 
         // Show correct back-nav button
-        if (u.role === 'approver') document.getElementById('btnApprove').classList.remove('d-none');
+        if (u.role === 'approver' || u.role === 'ex') document.getElementById('btnApprove').classList.remove('d-none');
         if (u.role === 'managerial') document.getElementById('btnManagerial').classList.remove('d-none');
 
         // Lock log branch filter too
-        if (_userBranch && u.role === 'managerial') {
+        if (_userBranch && (u.role === 'managerial' || u.role === 'approver' || u.role === 'ex')) {
           const sel = document.getElementById('filterBranch');
           sel.value = _userBranch;
           sel.disabled = true;

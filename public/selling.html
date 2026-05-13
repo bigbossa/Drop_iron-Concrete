@@ -9,6 +9,7 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="/nav-unified.css" rel="stylesheet">
+    <link href="/executive-theme.css" rel="stylesheet">
     <style>
         body {
             background: #eef2f7;
@@ -80,6 +81,18 @@
             background: #fce4ec;
             color: #880e4f;
             border: 1px solid #f48fb1;
+        }
+
+        .tbadge-concrete-general {
+            background: #eef2ff;
+            color: #3730a3;
+            border: 1px solid #c7d2fe;
+        }
+
+        .tbadge-concrete-quality {
+            background: #f0fdf4;
+            color: #166534;
+            border: 1px solid #86efac;
         }
 
         @media (max-width: 575px) {
@@ -238,13 +251,27 @@
                             <input type="date" class="form-control form-control-sm" id="fDate">
                         </div>
                         <div class="mb-2">
-                            <label class="form-label small fw-semibold mb-1">ประเภทเหล็ก <span
+                            <label class="form-label small fw-semibold mb-1">ประเภทวัสดุ <span
                                     class="text-danger">*</span></label>
                             <select class="form-select form-select-sm" id="fScrapType">
                                 <option value="">— เลือกประเภท —</option>
+                                <optgroup label="เหล็ก">
                                 <option value="thin">เหล็กบาง</option>
                                 <option value="thick">เหล็กหนา</option>
                                 <option value="special">เหล็กหนาพิเศษ</option>
+                                </optgroup>
+                                <optgroup label="คอนกรีต">
+                                <option value="concrete_plant">เศษคอนกรีตจากโรงงานผลิต</option>
+                                <option value="concrete_factory_product_test">เศษผลิตภัณฑ์คอนกรีตในโรงงานและเศษจากผลิตภัณฑ์ที่ทำการทดสอบ/เทส</option>
+                                <option value="concrete_site_defect">เศษผลิตภัณฑ์ชำรุดหน้างาน</option>
+                                <option value="concrete_wrong_spec">เศษผลิตภัณฑ์ที่ผิดแปลสภาพ</option>
+                                <option value="concrete_transfer">เศษคอนกรีตระหว่างขนส่งและลำเลียง</option>
+                                <option value="concrete_site">เศษคอนกรีตบริเวณหน้างาน</option>
+                                <option value="concrete_structure">เศษคอนกรีตจากงานรื้อ/ซ่อมโครงสร้าง</option>
+                                <option value="concrete_cube">ลูกปูนเทสต์ (คิวบ์เทสต์)</option>
+                                <option value="concrete_sludge">เศษงานสลัดจ์</option>
+                                <option value="concrete_grind">เศษงานเจียร/สกัดคอนกรีต</option>
+                                </optgroup>
                             </select>
                         </div>
                         <div class="mb-2">
@@ -257,6 +284,15 @@
                             <label class="form-label small fw-semibold mb-1">หมายเหตุ</label>
                             <textarea class="form-control form-control-sm" id="fNotes" rows="2" maxlength="500"
                                 placeholder="ไม่จำเป็น"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold mb-1">รูปภาพการขาย <span
+                                    class="text-danger">*</span></label>
+                            <input type="file" class="form-control form-control-sm" id="fSalePhoto" accept="image/*" capture="environment"
+                                onchange="previewSalePhoto()">
+                            <div class="form-text">รองรับไฟล์ jpg/png/gif/webp ขนาดไม่เกิน 10 MB</div>
+                            <img id="salePhotoPreview" alt="ตัวอย่างรูปภาพการขาย" class="img-fluid rounded border mt-2 d-none"
+                                style="max-height:170px;object-fit:cover;">
                         </div>
                         <button class="btn btn-danger w-100" onclick="addSale()">
                             <i class="fas fa-save me-2"></i>บันทึกและส่ง Approver
@@ -335,6 +371,18 @@
             thin: 'เหล็กบาง',
             thick: 'เหล็กหนา',
             special: 'เหล็กหนาพิเศษ',
+            concrete_plant: 'เศษคอนกรีตจากโรงงานผลิต',
+            concrete_factory_product_test: 'เศษผลิตภัณฑ์คอนกรีตในโรงงานและเศษจากผลิตภัณฑ์ที่ทำการทดสอบ/เทส',
+            concrete_site_defect: 'เศษผลิตภัณฑ์ชำรุดหน้างาน',
+            concrete_wrong_spec: 'เศษผลิตภัณฑ์ที่ผิดแปลสภาพ',
+            concrete_transfer: 'เศษคอนกรีตระหว่างขนส่งและลำเลียง',
+            concrete_site: 'เศษคอนกรีตบริเวณหน้างาน',
+            concrete_structure: 'เศษคอนกรีตจากงานรื้อ/ซ่อมโครงสร้าง',
+            concrete_cube: 'ลูกปูนเทสต์ (คิวบ์เทสต์)',
+            concrete_sludge: 'เศษงานสลัดจ์',
+            concrete_grind: 'เศษงานเจียร/สกัดคอนกรีต',
+            concrete_general: 'คอนกรีตทั่วไป',
+            concrete_quality: 'คอนกรีตทดสอบ/งานซ่อม',
         };
         const TYPE_GROUP = {
             thin_1: 'thin',
@@ -347,8 +395,26 @@
             thin: 'thin',
             thick: 'thick',
             special: 'special',
+            concrete_plant: 'concrete_general',
+            concrete_factory_product_test: 'concrete_general',
+            concrete_site_defect: 'concrete_general',
+            concrete_wrong_spec: 'concrete_general',
+            concrete_transfer: 'concrete_general',
+            concrete_site: 'concrete_general',
+            concrete_structure: 'concrete_general',
+            concrete_cube: 'concrete_quality',
+            concrete_sludge: 'concrete_quality',
+            concrete_grind: 'concrete_quality',
+            concrete_general: 'concrete_general',
+            concrete_quality: 'concrete_quality',
         };
-        const GROUP_BADGE_CLS = { thin: 'tbadge-thin', thick: 'tbadge-thick', special: 'tbadge-special' };
+        const GROUP_BADGE_CLS = {
+            thin: 'tbadge-thin',
+            thick: 'tbadge-thick',
+            special: 'tbadge-special',
+            concrete_general: 'tbadge-concrete-general',
+            concrete_quality: 'tbadge-concrete-quality',
+        };
         const SALE_STATUS_TH = {
             pending_approval: 'รอ Approver อนุมัติ',
             approved_by_approver: 'Approver อนุมัติแล้ว',
@@ -417,6 +483,21 @@
             loadSales();
         }
 
+        function previewSalePhoto() {
+            const input = document.getElementById('fSalePhoto');
+            const preview = document.getElementById('salePhotoPreview');
+            const file = input.files && input.files[0] ? input.files[0] : null;
+
+            if (!file) {
+                preview.src = '';
+                preview.classList.add('d-none');
+                return;
+            }
+
+            preview.src = URL.createObjectURL(file);
+            preview.classList.remove('d-none');
+        }
+
         // ── KPI ────────────────────────────────────────────────────────────────────────
         function renderKPI(list, rpt) {
             const confirmed = list.filter(r => r.status === 'confirmed_by_managerial');
@@ -428,15 +509,25 @@
             const thin = confirmed.filter(r => TYPE_GROUP[r.scrapType] === 'thin').reduce((s, r) => s + r.weightKg, 0);
             const thick = confirmed.filter(r => TYPE_GROUP[r.scrapType] === 'thick').reduce((s, r) => s + r.weightKg, 0);
             const special = confirmed.filter(r => TYPE_GROUP[r.scrapType] === 'special').reduce((s, r) => s + r.weightKg, 0);
+            const concreteGeneral = confirmed.filter(r => TYPE_GROUP[r.scrapType] === 'concrete_general').reduce((s, r) => s + r.weightKg, 0);
+            const concreteQuality = confirmed.filter(r => TYPE_GROUP[r.scrapType] === 'concrete_quality').reduce((s, r) => s + r.weightKg, 0);
             const fmt = w => Number(w || 0).toLocaleString('th-TH', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
             const fmtP = w => Number(w || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
             // Stock from disposal records (managerial report)
             const dTotal = rpt ? (rpt.total || 0) : null;
-            const dTotalW = rpt ? ((rpt.weightByGroup?.thin || 0) + (rpt.weightByGroup?.thick || 0) + (rpt.weightByGroup?.special || 0)) : null;
+            const dTotalW = rpt
+                ? ((rpt.weightByGroup?.thin || 0)
+                    + (rpt.weightByGroup?.thick || 0)
+                    + (rpt.weightByGroup?.special || 0)
+                    + (rpt.weightByGroup?.concrete_general || 0)
+                    + (rpt.weightByGroup?.concrete_quality || 0))
+                : null;
             const dThin = rpt ? (rpt.weightByGroup?.thin || 0) : null;
             const dThick = rpt ? (rpt.weightByGroup?.thick || 0) : null;
             const dSpecial = rpt ? (rpt.weightByGroup?.special || 0) : null;
+            const dConcreteGeneral = rpt ? (rpt.weightByGroup?.concrete_general || 0) : null;
+            const dConcreteQuality = rpt ? (rpt.weightByGroup?.concrete_quality || 0) : null;
 
             const stockRow = rpt ? `
     <div class="row g-2 mb-1" hidden>
@@ -471,6 +562,18 @@
           <div class="kpi-label" style="color:#880e4f">หนาพิเศษ (กก.)</div>
         </div>
       </div>
+            <div class="col-6 col-md-3">
+                <div class="kpi-card border" style="background:#eef2ff">
+                    <div class="kpi-num" style="color:#3730a3">${fmt(dConcreteGeneral)}</div>
+                    <div class="kpi-label" style="color:#3730a3">คอนกรีตทั่วไป (กก.)</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="kpi-card border" style="background:#f0fdf4">
+                    <div class="kpi-num" style="color:#166534">${fmt(dConcreteQuality)}</div>
+                    <div class="kpi-label" style="color:#166534">คอนกรีตทดสอบ/ซ่อม (กก.)</div>
+                </div>
+            </div>
     </div>
     <hr class="my-2">
     <div class="row g-2 mb-1">
@@ -519,6 +622,18 @@
           <div class="kpi-label" style="color:#880e4f">หนาพิเศษ (กก.)</div>
         </div>
       </div>
+                        <div class="col-6 col-md-2">
+                <div class="kpi-card border" style="background:#eef2ff">
+                    <div class="kpi-num" style="color:#3730a3">${fmt(concreteGeneral)}</div>
+                    <div class="kpi-label" style="color:#3730a3">คอนกรีตทั่วไป (กก.)</div>
+                </div>
+            </div>
+                        <div class="col-6 col-md-2">
+                <div class="kpi-card border" style="background:#f0fdf4">
+                    <div class="kpi-num" style="color:#166534">${fmt(concreteQuality)}</div>
+                    <div class="kpi-label" style="color:#166534">คอนกรีตทดสอบ/ซ่อม (กก.)</div>
+                </div>
+            </div>
       <div class="col-6 col-md-2" hidden>
         <div class="kpi-card border" style="background:#f0fdf4">
           <div class="kpi-num text-success" style="font-size:1.4rem">${fmtP(totalP)}</div>
@@ -533,6 +648,8 @@
                 const rThin = (dThin || 0) - thin;
                 const rThick = (dThick || 0) - thick;
                 const rSpecial = (dSpecial || 0) - special;
+                const rConcreteGeneral = (dConcreteGeneral || 0) - concreteGeneral;
+                const rConcreteQuality = (dConcreteQuality || 0) - concreteQuality;
                 const col = v => v < 0 ? 'color:#dc3545' : 'color:#1a5c3a';
                 return `
     <hr class="my-2">
@@ -562,6 +679,18 @@
           <div class="kpi-label" style="color:#880e4f">หนาพิเศษ (กก.)</div>
         </div>
       </div>
+            <div class="col-6 col-md-3">
+                <div class="kpi-card border" style="background:#eef2ff">
+                    <div class="kpi-num" style="${col(rConcreteGeneral)}">${fmt(rConcreteGeneral)}</div>
+                    <div class="kpi-label" style="color:#3730a3">คอนกรีตทั่วไป (กก.)</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="kpi-card border" style="background:#f0fdf4">
+                    <div class="kpi-num" style="${col(rConcreteQuality)}">${fmt(rConcreteQuality)}</div>
+                    <div class="kpi-label" style="color:#166534">คอนกรีตทดสอบ/ซ่อม (กก.)</div>
+                </div>
+            </div>
     </div>`;
             })() : '';
 
@@ -580,7 +709,7 @@
             const rows = list.map(s => {
                 const [y, m, d] = (s.saleDate || '').split('-');
                 const dateStr = y ? `${d}/${m}/${y}` : '–';
-                const grp = TYPE_GROUP[s.scrapType] || 'thin';
+                const grp = TYPE_GROUP[s.scrapType] || 'unknown';
                 const badgeCls = GROUP_BADGE_CLS[grp] || '';
                 return `
       <div class="sale-row">
@@ -602,6 +731,7 @@
                             ${s.rejectionReason ? ` &nbsp;<i class="fas fa-ban me-1 text-danger"></i>${esc(s.rejectionReason)}` : ''}
               ${s.notes ? ` &nbsp;<i class="fas fa-comment me-1"></i>${esc(s.notes)}` : ''}
             </div>
+                        ${s.salePhoto ? `<div class="mt-1"><a href="/uploads/${esc(s.salePhoto)}" target="_blank" rel="noopener"><img src="/uploads/${esc(s.salePhoto)}" alt="sale-photo" class="img-thumbnail" style="max-width:120px;max-height:90px;object-fit:cover"></a></div>` : ''}
           </div>
           <div class="text-end flex-shrink-0 d-flex flex-column align-items-end gap-1">
             <div class="fw-bold text-danger" style="font-size:.95rem">${fmt(s.weightKg)} กก.</div>
@@ -628,9 +758,10 @@
             const scrapType = document.getElementById('fScrapType').value;
             const weightKg = document.getElementById('fWeight').value;
             const notes = document.getElementById('fNotes').value.trim();
+            const salePhoto = document.getElementById('fSalePhoto').files[0];
 
-            if (!branch || !saleDate || !scrapType || !weightKg) {
-                alertEl.textContent = 'กรุณากรอกข้อมูลที่จำเป็นให้ครบ (สาขา / วันที่ / ประเภท / น้ำหนัก)';
+            if (!branch || !saleDate || !scrapType || !weightKg || !salePhoto) {
+                alertEl.textContent = 'กรุณากรอกข้อมูลที่จำเป็นให้ครบ (สาขา / วันที่ / ประเภท / น้ำหนัก / รูปภาพ)';
                 alertEl.classList.remove('d-none');
                 return;
             }
@@ -640,10 +771,17 @@
             btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>กำลังบันทึก...';
 
             try {
+                const formData = new FormData();
+                formData.set('branch', branch);
+                formData.set('saleDate', saleDate);
+                formData.set('scrapType', scrapType);
+                formData.set('weightKg', weightKg);
+                formData.set('notes', notes);
+                formData.set('salePhoto', salePhoto);
+
                 const res = await fetch('/api/sales', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ branch, saleDate, scrapType, weightKg, notes }),
+                    body: formData,
                 });
                 const data = await res.json();
                 if (data.success) {
@@ -651,6 +789,9 @@
                     document.getElementById('fScrapType').value = '';
                     document.getElementById('fWeight').value = '';
                     document.getElementById('fNotes').value = '';
+                    document.getElementById('fSalePhoto').value = '';
+                    document.getElementById('salePhotoPreview').src = '';
+                    document.getElementById('salePhotoPreview').classList.add('d-none');
                     alert('บันทึกสำเร็จ และส่งรายการให้ Approver แล้ว');
                     await loadSales();
                 } else {

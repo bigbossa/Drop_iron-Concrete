@@ -1,9 +1,74 @@
 const { v4: uuidv4 } = require('uuid');
 const express = require('express');
 const { requireLogin, requireRole } = require('../middleware/auth');
+const { upload } = require('../middleware/upload');
+const { TYPE_GROUPS, GROUP_LABELS } = require('../constants/scrap');
 const { sendServerError } = require('../utils/responses');
 
 const router = express.Router();
+
+function resolveTypeGroup(scrapType) {
+  if (!scrapType) return null;
+  if (TYPE_GROUPS[scrapType]) return scrapType;
+  for (const [group, types] of Object.entries(TYPE_GROUPS)) {
+    if (types.includes(scrapType)) return group;
+  }
+  return null;
+}
+
+function emptyWeightByGroup() {
+  const out = {};
+  Object.keys(TYPE_GROUPS).forEach((k) => { out[k] = 0; });
+  return out;
+}
+
+function round2(v) {
+  return Math.round((Number(v) || 0) * 100) / 100;
+}
+
+async function loadSaleAvailabilityByGroup(pool, branch) {
+  const inRes = await pool.query(
+    `SELECT si.scrap_type, COALESCE(SUM(si.weight),0) AS w
+     FROM submission_items si
+     JOIN submissions s ON s.id = si.submission_id
+     WHERE s.status='completed' AND s.branch=$1
+     GROUP BY si.scrap_type`,
+    [branch]
+  );
+
+  const outRes = await pool.query(
+    `SELECT scrap_type, COALESCE(SUM(weight_kg),0) AS w
+     FROM scrap_sales
+     WHERE status='confirmed_by_managerial' AND branch=$1
+     GROUP BY scrap_type`,
+    [branch]
+  );
+
+  const incomingByGroup = emptyWeightByGroup();
+  for (const row of inRes.rows) {
+    const grp = resolveTypeGroup(row.scrap_type);
+    if (!grp) continue;
+    incomingByGroup[grp] += parseFloat(row.w) || 0;
+  }
+
+  const soldByGroup = emptyWeightByGroup();
+  for (const row of outRes.rows) {
+    const grp = resolveTypeGroup(row.scrap_type);
+    if (!grp) continue;
+    soldByGroup[grp] += parseFloat(row.w) || 0;
+  }
+
+  const availableByGroup = emptyWeightByGroup();
+  Object.keys(availableByGroup).forEach((grp) => {
+    availableByGroup[grp] = round2((incomingByGroup[grp] || 0) - (soldByGroup[grp] || 0));
+  });
+
+  return {
+    incomingByGroup: Object.fromEntries(Object.entries(incomingByGroup).map(([k, v]) => [k, round2(v)])),
+    soldByGroup: Object.fromEntries(Object.entries(soldByGroup).map(([k, v]) => [k, round2(v)])),
+    availableByGroup,
+  };
+}
 
 function formatDateOnly(value) {
   if (!value) return null;
@@ -27,6 +92,7 @@ function mapSaleRow(row) {
     totalPrice: row.total_price ? parseFloat(row.total_price) : null,
     buyer: row.buyer || '',
     notes: row.notes || '',
+    salePhoto: row.sale_photo || '',
     recordedBy: row.recorded_by,
     status: row.status || 'pending_approval',
     approvedBy: row.approved_by || '',
@@ -40,7 +106,7 @@ function mapSaleRow(row) {
   };
 }
 
-router.get('/sales', requireLogin, requireRole('managerial', 'superadmin', 'approver'), async (req, res) => {
+router.get('/sales', requireLogin, requireRole('managerial', 'superadmin', 'approver', 'ex'), async (req, res) => {
   try {
     const { pool } = req.app.locals;
     const user = req.session.user;
@@ -49,7 +115,7 @@ router.get('/sales', requireLogin, requireRole('managerial', 'superadmin', 'appr
     const params = [];
     const conditions = [];
 
-    if ((user.role === 'managerial' || user.role === 'approver') && user.branch) {
+    if ((user.role === 'managerial' || user.role === 'approver' || user.role === 'ex') && user.branch) {
       params.push(user.branch);
       conditions.push(`branch = $${params.length}`);
     } else if (branch) {
@@ -85,7 +151,35 @@ router.get('/sales', requireLogin, requireRole('managerial', 'superadmin', 'appr
   }
 });
 
-router.post('/sales', requireLogin, requireRole('managerial', 'superadmin'), async (req, res) => {
+router.get('/sales/availability', requireLogin, requireRole('managerial', 'superadmin', 'approver', 'ex'), async (req, res) => {
+  try {
+    const { pool } = req.app.locals;
+    const user = req.session.user;
+    const { scrapType } = req.query;
+
+    const branch = (user.role === 'managerial' || user.role === 'approver' || user.role === 'ex') && user.branch
+      ? user.branch
+      : (req.query.branch || '').trim();
+
+    if (!branch) return res.status(400).json({ error: 'กรุณาระบุสาขา' });
+
+    const stock = await loadSaleAvailabilityByGroup(pool, branch);
+    const group = resolveTypeGroup(scrapType);
+    const availableKg = group ? (stock.availableByGroup[group] || 0) : null;
+
+    return res.json({
+      branch,
+      group: group || null,
+      groupLabel: group ? (GROUP_LABELS[group] || group) : null,
+      availableKg,
+      availableByGroup: stock.availableByGroup,
+    });
+  } catch (err) {
+    return sendServerError(res, err);
+  }
+});
+
+router.post('/sales', requireLogin, requireRole('managerial', 'superadmin'), upload.single('salePhoto'), async (req, res) => {
   try {
     const { pool } = req.app.locals;
     const user = req.session.user;
@@ -95,19 +189,34 @@ router.post('/sales', requireLogin, requireRole('managerial', 'superadmin'), asy
     const branch = user.role === 'managerial' && user.branch ? user.branch : (req.body.branch || '').trim();
     if (!branch) return res.status(400).json({ error: 'กรุณาระบุสาขา' });
     if (!saleDate) return res.status(400).json({ error: 'กรุณาระบุวันที่ขาย' });
-    if (!scrapType) return res.status(400).json({ error: 'กรุณาระบุประเภทเหล็ก' });
+    if (!scrapType) return res.status(400).json({ error: 'กรุณาระบุประเภทวัสดุ' });
+    if (!req.file) return res.status(400).json({ error: 'กรุณาแนบรูปภาพการขาย' });
+    const group = resolveTypeGroup(scrapType);
+    if (!group) return res.status(400).json({ error: 'ประเภทวัสดุไม่ถูกต้อง' });
 
     const w = parseFloat(weightKg);
     if (!w || w <= 0) return res.status(400).json({ error: 'น้ำหนักต้องมากกว่า 0' });
 
+    const stock = await loadSaleAvailabilityByGroup(pool, branch);
+    const availableKg = stock.availableByGroup[group] || 0;
+    if ((w - availableKg) > 0.000001) {
+      return res.status(400).json({
+        error: `น้ำหนักเกินคงเหลือของ${GROUP_LABELS[group] || group} (คงเหลือ ${round2(availableKg)} กก.)`,
+        group,
+        groupLabel: GROUP_LABELS[group] || group,
+        availableKg: round2(availableKg),
+      });
+    }
+
     const ppk = pricePerKg ? parseFloat(pricePerKg) : null;
     const total = ppk && w ? Math.round(ppk * w * 100) / 100 : null;
+    const salePhoto = req.file ? req.file.filename : null;
     const id = uuidv4();
 
     await pool.query(
       `INSERT INTO scrap_sales
-       (id, branch, sale_date, scrap_type, weight_kg, price_per_kg, total_price, buyer, notes, recorded_by, status)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'pending_approval')`,
+       (id, branch, sale_date, scrap_type, weight_kg, price_per_kg, total_price, buyer, notes, sale_photo, recorded_by, status)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'pending_approval')`,
       [
         id,
         branch,
@@ -118,6 +227,7 @@ router.post('/sales', requireLogin, requireRole('managerial', 'superadmin'), asy
         total,
         (buyer || '').trim() || null,
         (notes || '').trim() || null,
+        salePhoto,
         user.fullName,
       ]
     );
@@ -162,7 +272,7 @@ router.delete('/sales/:id', requireLogin, requireRole('managerial', 'superadmin'
   }
 });
 
-router.post('/sales/:id/approve', requireLogin, requireRole('approver'), async (req, res) => {
+router.post('/sales/:id/approve', requireLogin, requireRole('ex'), async (req, res) => {
   try {
     const { pool } = req.app.locals;
     const user = req.session.user;
@@ -205,7 +315,7 @@ router.post('/sales/:id/approve', requireLogin, requireRole('approver'), async (
   }
 });
 
-router.post('/sales/:id/reject', requireLogin, requireRole('approver'), async (req, res) => {
+router.post('/sales/:id/reject', requireLogin, requireRole('ex'), async (req, res) => {
   try {
     const { pool } = req.app.locals;
     const user = req.session.user;
@@ -281,14 +391,14 @@ router.post('/sales/:id/confirm', requireLogin, requireRole('managerial', 'super
   }
 });
 
-router.get('/sale-logs', requireLogin, requireRole('managerial', 'superadmin', 'approver'), async (req, res) => {
+router.get('/sale-logs', requireLogin, requireRole('managerial', 'superadmin', 'approver', 'ex'), async (req, res) => {
   try {
     const { pool } = req.app.locals;
     const user = req.session.user;
     const { dateFrom, dateTo } = req.query;
     let { branch } = req.query;
 
-    if ((user.role === 'managerial' || user.role === 'approver') && user.branch) branch = user.branch;
+    if ((user.role === 'managerial' || user.role === 'approver' || user.role === 'ex') && user.branch) branch = user.branch;
 
     const params = [];
     const conds = [];

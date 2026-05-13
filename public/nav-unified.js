@@ -2,13 +2,15 @@
   const ROLE_LABELS = {
     submitter: 'Submitter',
     approver: 'Approver',
+    ex: 'Executive',
     managerial: 'Managerial',
     superadmin: 'SuperAdmin',
   };
 
   const ROLE_LINK_ORDER = {
-    submitter: ['/', '/status.html'],
+    submitter: ['/', '/concrete-form.html', '/status.html'],
     approver: ['/approve.html', '/history.html', '/dashboard.html'],
+    ex: ['/approve.html', '/history.html', '/dashboard.html'],
     managerial: ['/managerial.html', '/selling.html', '/history.html', '/dashboard.html'],
     superadmin: ['/requests.html', '/admin.html', '/dashboard.html'],
   };
@@ -20,11 +22,16 @@
     '/status.html': {
       submitter: '/',
     },
+    '/concrete-form.html': {
+      submitter: '/status.html',
+    },
     '/approve.html': {
       approver: '/history.html',
+      ex: '/history.html',
     },
     '/dashboard.html': {
       approver: '/approve.html',
+      ex: '/approve.html',
       managerial: '/managerial.html',
       superadmin: '/requests.html',
     },
@@ -38,6 +45,7 @@
     },
     '/history.html': {
       approver: '/approve.html',
+      ex: '/approve.html',
       managerial: '/managerial.html',
       superadmin: '/requests.html',
     },
@@ -206,6 +214,58 @@
       el.classList.remove('app-nav-primary');
     });
     target.classList.add('app-nav-primary');
+  }
+
+  function createExecutiveSidebar(actions, user) {
+    if (window.matchMedia('(max-width: 991px)').matches) return;
+    if (window.location.pathname === '/dashboard.html') return;
+    if (document.getElementById('exec-side-rail')) {
+      actions.classList.add('side-rail-enabled');
+      return;
+    }
+
+    const links = Array.from(actions.querySelectorAll('a.app-nav-btn')).filter((el) => !el.classList.contains('d-none'));
+    if (links.length === 0) return;
+
+    const rail = document.createElement('aside');
+    rail.id = 'exec-side-rail';
+    rail.className = 'exec-side-rail';
+
+    const brand = document.createElement('div');
+    brand.className = 'exec-side-rail-brand';
+    brand.innerHTML = '<i class="fas fa-industry"></i><span>Iron Drop</span>';
+
+    const nav = document.createElement('nav');
+    nav.className = 'exec-side-rail-nav';
+
+    links.forEach((el) => {
+      const item = document.createElement('a');
+      item.className = 'exec-rail-link';
+      item.href = el.getAttribute('href') || '#';
+      if (el.classList.contains('is-active')) item.classList.add('active');
+      if (el.classList.contains('app-nav-primary')) item.classList.add('primary');
+
+      const iconClass = el.querySelector('i')?.className || 'fas fa-circle';
+      const icon = document.createElement('i');
+      icon.className = iconClass;
+
+      const label = document.createElement('span');
+      label.textContent = inferLabel(el);
+
+      item.append(icon, label);
+      nav.appendChild(item);
+    });
+
+    const footer = document.createElement('div');
+    footer.className = 'exec-side-rail-footer';
+    const roleLabel = ROLE_LABELS[user?.role] || (user?.role || 'User');
+    const name = user?.fullName || user?.employeeId || 'ผู้ใช้งาน';
+    footer.textContent = `${roleLabel} | ${name}`;
+
+    rail.append(brand, nav, footer);
+    document.body.prepend(rail);
+    document.body.classList.add('has-exec-side-rail');
+    actions.classList.add('side-rail-enabled');
   }
 
   function simplifyNavbar(actions) {

@@ -9,6 +9,7 @@
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link href="/nav-unified.css" rel="stylesheet">
+  <link href="/executive-theme.css" rel="stylesheet">
   <style>
     body {
       background: #eef2f7;
@@ -60,6 +61,12 @@
       background: #fff3cd;
       color: #664d03;
       border: 1px solid #ffc107;
+    }
+
+    .role-ex {
+      background: #e0f2fe;
+      color: #0c4a6e;
+      border: 1px solid #7dd3fc;
     }
 
     .status-active {
@@ -220,6 +227,7 @@
               <option value="approver">Approver</option>
               <option value="superadmin">SuperAdmin</option>
               <option value="managerial">Managerial</option>
+              <option value="ex">Executive</option>
             </select>
             <select class="form-select form-select-sm" id="filterStatus" onchange="filterTable()" style="width:auto">
               <option value="">ทุกสถานะ</option>
@@ -241,6 +249,7 @@
           <span class="small text-muted">Approver: <strong id="cntApprover">–</strong></span>
           <span class="small text-muted">SuperAdmin: <strong id="cntSuperadmin">–</strong></span>
           <span class="small text-muted">Managerial: <strong id="cntManagerial">–</strong></span>
+          <span class="small text-muted">Executive: <strong id="cntEx">–</strong></span>
           <span class="small text-muted">ใช้งาน: <strong id="cntActive">–</strong></span>
         </div>
       </div>
@@ -306,6 +315,7 @@
                   <option value="approver">Approver (ผู้อนุมัติ)</option>
                   <option value="superadmin">SuperAdmin (ผู้ดูแลระบบ)</option>
                   <option value="managerial">Managerial (ผู้จัดการ)</option>
+                  <option value="ex">Executive (อนุมัติขายออก)</option>
                 </select>
               </div>
               <div class="col-sm-6">
@@ -410,6 +420,7 @@
         approver: ['role-approver', 'ผู้อนุมัติ'],
         superadmin: ['role-superadmin', 'SuperAdmin'],
         managerial: ['role-managerial', 'Managerial'],
+        ex: ['role-ex', 'Executive'],
       };
       const [cls, label] = map[role] || ['bg-secondary text-white', role];
       return `<span class="role-badge ${cls}">${label}</span>`;
@@ -458,6 +469,7 @@
       document.getElementById('cntApprover').textContent = users.filter(u => u.role === 'approver').length;
       document.getElementById('cntSuperadmin').textContent = users.filter(u => u.role === 'superadmin').length;
       document.getElementById('cntManagerial').textContent = users.filter(u => u.role === 'managerial').length;
+      document.getElementById('cntEx').textContent = users.filter(u => u.role === 'ex').length;
       document.getElementById('cntActive').textContent = users.filter(u => u.isActive).length;
     }
 
@@ -524,7 +536,8 @@
 
       const employeeId = document.getElementById('fEmployeeId').value.trim();
       const fullName = document.getElementById('fFullName').value.trim();
-      const role = document.getElementById('fRole').value;
+      const roleRaw = document.getElementById('fRole').value;
+      const role = String(roleRaw || '').trim().toLowerCase() === 'executive' ? 'ex' : roleRaw;
       const branch = document.getElementById('fBranch').value;
       const department = document.getElementById('fDepartment').value.trim();
       const position = document.getElementById('fPosition').value.trim();

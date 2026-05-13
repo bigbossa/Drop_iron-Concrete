@@ -1,132 +1,199 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="th">
 
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dashboard — Iron Drop</title>
+  <title>Dashboard - Iron Drop</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link href="/nav-unified.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
   <style>
+    :root {
+      --page-bg: #f3f6fa;
+      --ink: #172033;
+      --muted: #64748b;
+      --line: #dbe3ee;
+      --brand: #1f5f9b;
+      --brand-dark: #123455;
+      --panel: #ffffff;
+    }
+
     body {
-      background: #eef2f7;
+      background: var(--page-bg);
+      color: var(--ink);
       font-family: 'Prompt', sans-serif;
+      font-size: .9rem;
+    }
+
+    .page-shell {
+      max-width: 1180px;
     }
 
     .page-header {
-      background: linear-gradient(135deg, #1a3a5c, #2563a8);
+      background: linear-gradient(135deg, var(--brand-dark), var(--brand));
       color: #fff;
-      padding: 1.25rem 1.5rem;
-      border-radius: 10px 10px 0 0;
+      padding: 1rem 1.25rem;
+      border-radius: 8px 8px 0 0;
     }
 
-    .section-label {
+    .card,
+    .panel,
+    .stat-card {
+      border-radius: 8px;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      padding: 1rem;
+    }
+
+    .section-title {
+      align-items: center;
+      color: var(--brand-dark);
+      display: flex;
       font-weight: 700;
-      color: #1a3a5c;
-      border-left: 4px solid #2563a8;
-      padding-left: .6rem;
-      margin-bottom: 1rem;
+      gap: .45rem;
+      margin-bottom: .8rem;
     }
 
-    /* KPI cards */
-    .kpi-card {
-      border-radius: 12px;
-      padding: 1.1rem 1.25rem;
-      color: #fff;
+    .section-title::before {
+      background: var(--brand);
+      border-radius: 3px;
+      content: "";
+      display: inline-block;
+      height: 1.15rem;
+      width: 4px;
+    }
+
+    .stat-card {
+      background: #fff;
+      border: 1px solid var(--line);
+      min-height: 106px;
+      padding: .85rem;
       position: relative;
-      overflow: hidden;
     }
 
-    .kpi-card .icon-bg {
-      position: absolute;
-      right: -10px;
-      bottom: -10px;
-      font-size: 4rem;
-      opacity: .15;
+    .stat-card .stat-icon {
+      align-items: center;
+      border-radius: 8px;
+      display: inline-flex;
+      height: 32px;
+      justify-content: center;
+      width: 32px;
     }
 
-    .kpi-card .kpi-num {
-      font-size: 2rem;
+    .stat-value {
+      font-size: 1.75rem;
       font-weight: 800;
-      line-height: 1;
+      line-height: 1.05;
+      margin-top: .45rem;
     }
 
-    .kpi-card .kpi-label {
+    .stat-label {
+      color: var(--muted);
+      font-size: .78rem;
+      margin-top: .15rem;
+    }
+
+    .soft-note {
+      color: var(--muted);
+      font-size: .78rem;
+    }
+
+    .quick-action {
+      align-items: center;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      color: var(--ink);
+      display: flex;
+      gap: .65rem;
+      padding: .75rem;
+      text-decoration: none;
+    }
+
+    .quick-action:hover {
+      background: #f8fbff;
+      border-color: #bdd3ee;
+      color: var(--brand-dark);
+    }
+
+    .quick-action i {
+      align-items: center;
+      background: #eef5ff;
+      border-radius: 8px;
+      color: var(--brand);
+      display: inline-flex;
+      height: 34px;
+      justify-content: center;
+      width: 34px;
+    }
+
+    .chart-box {
+      height: 260px;
+      position: relative;
+    }
+
+    .chart-box.compact {
+      height: 230px;
+    }
+
+    .chart-fallback {
+      align-items: center;
+      background: #f8fbff;
+      border: 1px dashed #bdd3ee;
+      border-radius: 8px;
+      color: var(--muted);
+      display: flex;
       font-size: .82rem;
-      opacity: .85;
-      margin-top: .2rem;
+      height: 100%;
+      justify-content: center;
+      padding: 1rem;
+      text-align: center;
     }
 
-    .kpi-total {
-      background: linear-gradient(135deg, #2563a8, #1a3a5c);
+    .status-pill,
+    .group-pill {
+      border-radius: 999px;
+      border: 1px solid transparent;
+      display: inline-flex;
+      font-size: .72rem;
+      font-weight: 700;
+      padding: .25rem .55rem;
+      white-space: nowrap;
     }
 
-    .kpi-pending {
-      background: linear-gradient(135deg, #f59e0b, #b45309);
+    .type-section-row td {
+      background: #f8fbff;
+      color: var(--brand-dark);
+      font-weight: 700;
     }
 
-    .kpi-approved {
-      background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+    .type-section-meta {
+      color: var(--muted);
+      font-size: .76rem;
+      font-weight: 600;
+      margin-left: .4rem;
     }
 
-    .kpi-rejected {
-      background: linear-gradient(135deg, #ef4444, #991b1b);
+    .progress {
+      background: #edf2f7;
+      height: 8px;
     }
 
-    .kpi-completed {
-      background: linear-gradient(135deg, #10b981, #065f46);
-    }
-
-    .kpi-weight {
-      background: linear-gradient(135deg, #8b5cf6, #4c1d95);
-    }
-
-    /* Status badges */
-    .badge-pending {
-      background: #fff3cd;
-      color: #856404;
-      border: 1px solid #ffc107;
-    }
-
-    .badge-approved {
-      background: #cfe2ff;
-      color: #084298;
-      border: 1px solid #0d6efd;
-    }
-
-    .badge-rejected {
-      background: #f8d7da;
-      color: #58151c;
-      border: 1px solid #dc3545;
-    }
-
-    .badge-completed {
-      background: #d1e7dd;
-      color: #0a3622;
-      border: 1px solid #198754;
-    }
-
-    .chart-wrap {
-      position: relative;
-      height: 240px;
-    }
-
-    .chart-wrap-tall {
-      position: relative;
-      height: 280px;
-    }
-
-    .table-recent td,
-    .table-recent th {
-      font-size: .85rem;
+    .table-sm td,
+    .table-sm th {
+      font-size: .82rem;
       vertical-align: middle;
     }
 
-    .refresh-btn {
-      cursor: pointer;
+    .empty-state {
+      color: var(--muted);
+      padding: 2rem 1rem;
+      text-align: center;
     }
 
     @media (max-width: 575px) {
@@ -134,24 +201,9 @@
         background: #fff;
       }
 
-      .container-lg {
+      .page-shell {
         padding-left: .5rem;
         padding-right: .5rem;
-      }
-
-      .py-4 {
-        padding-top: .75rem !important;
-        padding-bottom: .75rem !important;
-      }
-
-      .card.shadow-sm {
-        box-shadow: none !important;
-      }
-
-      .card {
-        border-radius: 0 !important;
-        border-left: none !important;
-        border-right: none !important;
       }
 
       .page-header {
@@ -160,557 +212,698 @@
       }
 
       .page-header h5 {
-        font-size: .95rem;
+        font-size: 1rem;
       }
 
+      .panel,
       .card-body {
         padding: .75rem;
       }
 
-      .hdr-actions .btn-label {
-        display: none;
+      .card.shadow-sm {
+        box-shadow: none !important;
       }
 
-      .hdr-actions .btn {
-        padding: .3rem .55rem;
+      .stat-value {
+        font-size: 1.45rem;
       }
 
-      #userInfo {
-        max-width: 80px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        display: inline-block;
-        vertical-align: middle;
-      }
-
-      .kpi-card .kpi-num {
-        font-size: 1.6rem;
-      }
-
-      .kpi-card {
-        padding: .75rem 1rem;
-      }
-
-      .chart-wrap {
-        height: 200px;
-      }
-
-      .chart-wrap-tall {
+      .chart-box,
+      .chart-box.compact {
         height: 220px;
-      }
-
-      .mb-4 {
-        margin-bottom: 1rem !important;
-      }
-
-      .section-label {
-        font-size: .88rem;
       }
     }
   </style>
 </head>
 
 <body>
-
-  <!-- Auth guard -->
-  <script>
-    let currentUser = null;
-    (async () => {
-      try {
-        const r = await fetch('/api/auth/me');
-        if (!r.ok) { window.location.replace('/login.html'); return; }
-        currentUser = await r.json();
-        if (!['approver', 'superadmin', 'managerial'].includes(currentUser.role)) {
-          window.location.replace('/login.html'); return;
-        }
-        document.getElementById('userInfo').textContent = `${currentUser.fullName} (${currentUser.employeeId})`;
-        document.getElementById('scopeLabel').textContent = 'ภาพรวมทั้งระบบ';
-        if (currentUser.role === 'superadmin') {
-          document.getElementById('userStatsRow').style.display = '';
-        }
-        // Set back-nav link based on role
-        const backBtn = document.getElementById('btnApproveBack');
-        if (currentUser.role === 'managerial') {
-          backBtn.href = '/managerial.html';
-          backBtn.title = 'รายงาน';
-          backBtn.querySelector('.btn-label').textContent = 'รายงาน';
-        }
-        loadDashboard();
-      } catch { window.location.replace('/login.html'); }
-    })();
-    async function logout() {
-      await fetch('/api/auth/logout', { method: 'POST' });
-      window.location.replace('/login.html');
-    }
-  </script>
-
-  <div class="container-lg py-4">
-
-    <!-- Header -->
-    <div class="card shadow-sm mb-4">
+  <div class="container-lg page-shell py-4">
+    <div class="card shadow-sm mb-3">
       <div class="page-header app-topbar">
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 app-topbar-inner py-1">
           <div>
-            <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Dashboard — Iron Drop</h5>
-            <small class="opacity-75" id="scopeLabel">กำลังโหลด...</small>
+            <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Dashboard - Iron Drop</h5>
+            <small class="opacity-75" id="scopeLabel">กำลังโหลดข้อมูล...</small>
           </div>
           <div class="d-flex align-items-center gap-2 flex-wrap hdr-actions app-nav-actions">
             <span class="app-page-chip"><i class="fas fa-chart-line"></i>หน้าแดชบอร์ด</span>
-            <button class="btn btn-outline-light btn-sm refresh-btn app-nav-btn" onclick="loadDashboard()" title="รีเฟรช">
+            <button class="btn btn-outline-light btn-sm app-nav-btn" onclick="loadDashboard()" title="รีเฟรช">
               <i class="fas fa-sync-alt"></i><span class="btn-label ms-1">รีเฟรช</span>
             </button>
-            <a href="/approve.html" id="btnApproveBack" class="btn btn-outline-light btn-sm app-nav-btn" title="หน้าหลัก">
+            <a href="/approve.html" id="primaryBackLink" class="btn btn-outline-light btn-sm app-nav-btn" title="หน้าหลัก">
               <i class="fas fa-home"></i><span class="btn-label ms-1">หน้าหลัก</span>
             </a>
             <span class="app-user-chip" id="userInfo"><i class="fas fa-user"></i>กำลังโหลด...</span>
-            <button class="btn btn-outline-light btn-sm app-nav-btn" onclick="logout()" title="ออก">
+            <button class="btn btn-outline-light btn-sm app-nav-btn" onclick="logout()" title="ออกจากระบบ">
               <i class="fas fa-sign-out-alt"></i><span class="btn-label ms-1">ออก</span>
             </button>
           </div>
         </div>
       </div>
+
       <div class="card-body py-2 border-bottom">
-        <small class="text-muted">อัพเดตล่าสุด: <span id="lastUpdate">–</span></small>
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <span class="soft-note"><i class="far fa-clock me-1"></i>อัปเดตล่าสุด: <span id="lastUpdate">-</span></span>
+          <span class="soft-note" id="dataHint">ข้อมูลคำขอเก็บเศษวัสดุและน้ำหนักรวม</span>
+        </div>
       </div>
 
-      <!-- KPI Row -->
       <div class="card-body">
-        <div class="row g-3" id="kpiRow">
-          <div class="col-6 col-md-4 col-lg-2">
-            <div class="kpi-card kpi-total">
-              <div class="kpi-num" id="kpiTotal">–</div>
-              <div class="kpi-label">คำขอทั้งหมด</div>
-              <i class="fas fa-clipboard-list icon-bg"></i>
-            </div>
-          </div>
-          <div class="col-6 col-md-4 col-lg-2">
-            <div class="kpi-card kpi-pending">
-              <div class="kpi-num" id="kpiPending">–</div>
-              <div class="kpi-label">รออนุมัติ</div>
-              <i class="fas fa-clock icon-bg"></i>
-            </div>
-          </div>
-          <div class="col-6 col-md-4 col-lg-2">
-            <div class="kpi-card kpi-approved">
-              <div class="kpi-num" id="kpiApproved">–</div>
-              <div class="kpi-label">อนุมัติแล้ว</div>
-              <i class="fas fa-check-circle icon-bg"></i>
-            </div>
-          </div>
-          <div class="col-6 col-md-4 col-lg-2">
-            <div class="kpi-card kpi-rejected">
-              <div class="kpi-num" id="kpiRejected">–</div>
-              <div class="kpi-label">ปฏิเสธ</div>
-              <i class="fas fa-times-circle icon-bg"></i>
-            </div>
-          </div>
-          <div class="col-6 col-md-4 col-lg-2">
-            <div class="kpi-card kpi-completed">
-              <div class="kpi-num" id="kpiCompleted">–</div>
-              <div class="kpi-label">เสร็จสิ้น</div>
-              <i class="fas fa-flag-checkered icon-bg"></i>
-            </div>
-          </div>
-          <div class="col-6 col-md-4 col-lg-2">
-            <div class="kpi-card kpi-weight">
-              <div class="kpi-num" id="kpiWeight">–</div>
-              <div class="kpi-label">น้ำหนักรวม (กก.)</div>
-              <i class="fas fa-weight-hanging icon-bg"></i>
-            </div>
-          </div>
-        </div>
+        <div class="row g-2" id="kpiRow"></div>
       </div>
     </div>
 
-    <!-- User Stats (superadmin only) -->
-    <div class="row g-3 mb-4" id="userStatsRow" style="display:none">
-      <div class="col-12">
-        <div class="card shadow-sm">
-          <div class="card-body">
-            <p class="section-label mb-3"><i class="fas fa-users me-1"></i>ผู้ใช้งานในระบบ (ที่ใช้งานอยู่)</p>
-            <div class="row g-3 text-center">
-              <div class="col-4">
-                <div class="fs-3 fw-bold text-primary" id="uSubmitter">–</div>
-                <div class="small text-muted">พนักงานส่งฟอร์ม</div>
-              </div>
-              <div class="col-4">
-                <div class="fs-3 fw-bold text-success" id="uApprover">–</div>
-                <div class="small text-muted">ผู้อนุมัติ</div>
-              </div>
-              <div class="col-4">
-                <div class="fs-3 fw-bold text-purple" id="uSuperadmin" style="color:#8b5cf6">–</div>
-                <div class="small text-muted">SuperAdmin</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Charts Row 1 -->
-    <div class="row g-3 mb-4">
-      <!-- Weight trend (bar) -->
+    <div class="row g-3 mb-3">
       <div class="col-lg-8">
-        <div class="card shadow-sm h-100">
-          <div class="card-body">
-            <p class="section-label"><i class="fas fa-chart-bar me-1"></i>น้ำหนักเศษเหล็ก 14 วันที่ผ่านมา</p>
-            <div class="chart-wrap-tall"><canvas id="chartDay"></canvas></div>
-          </div>
+        <div class="panel h-100">
+          <div class="section-title"><i class="fas fa-list-check"></i>งานที่ต้องดูแล</div>
+          <div class="row g-2" id="workQueue"></div>
         </div>
       </div>
-      <!-- Weight by type (doughnut) -->
       <div class="col-lg-4">
-        <div class="card shadow-sm h-100">
-          <div class="card-body">
-            <p class="section-label"><i class="fas fa-chart-pie me-1"></i>สัดส่วนประเภทเหล็ก</p>
-            <div class="chart-wrap"><canvas id="chartType"></canvas></div>
-            <div id="typeLegend" class="mt-2"></div>
-          </div>
+        <div class="panel h-100">
+          <div class="section-title"><i class="fas fa-bolt"></i>ทางลัด</div>
+          <div class="d-grid gap-2" id="quickActions"></div>
         </div>
       </div>
     </div>
 
-    <!-- Charts Row 2 -->
-    <div class="row g-3 mb-4">
-      <!-- Weight by area (horizontal bar) -->
+    <div class="row g-3 mb-3">
+      <div class="col-lg-8">
+        <div class="panel h-100">
+          <div class="section-title"><i class="fas fa-chart-column"></i>น้ำหนัก 14 วันที่ผ่านมา</div>
+          <div class="chart-box"><canvas id="chartDay"></canvas></div>
+        </div>
+      </div>
+      <div class="col-lg-4">
+        <div class="panel h-100">
+          <div class="section-title"><i class="fas fa-chart-pie"></i>สัดส่วนตามกลุ่มวัสดุ</div>
+          <div class="chart-box compact"><canvas id="chartGroup"></canvas></div>
+          <div id="groupLegend" class="mt-2"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-3 mb-3">
       <div class="col-lg-6">
-        <div class="card shadow-sm h-100">
-          <div class="card-body">
-            <p class="section-label"><i class="fas fa-industry me-1"></i>น้ำหนักตามพื้นที่ (Top 8)</p>
-            <div class="chart-wrap-tall"><canvas id="chartArea"></canvas></div>
-          </div>
+        <div class="panel h-100">
+          <div class="section-title"><i class="fas fa-industry"></i>พื้นที่ที่มีน้ำหนักสูงสุด</div>
+          <div class="chart-box compact"><canvas id="chartArea"></canvas></div>
         </div>
       </div>
-      <!-- Weight by branch (superadmin) / Status breakdown (submitter) -->
       <div class="col-lg-6">
-        <div class="card shadow-sm h-100">
-          <div class="card-body">
-            <p class="section-label" id="chart3Label"><i class="fas fa-building me-1"></i>น้ำหนักตามสาขา</p>
-            <div class="chart-wrap-tall"><canvas id="chartBranch"></canvas></div>
+        <div class="panel h-100">
+          <div class="section-title" id="branchPanelTitle"><i class="fas fa-building"></i>น้ำหนักตามสาขา</div>
+          <div class="chart-box compact"><canvas id="chartBranch"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-3 mb-3" id="adminStatsWrap" style="display:none">
+      <div class="col-12">
+        <div class="panel">
+          <div class="section-title"><i class="fas fa-users"></i>ผู้ใช้งานที่เปิดใช้งาน</div>
+          <div class="row g-2" id="adminStats"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-3 mb-3">
+      <div class="col-lg-7">
+        <div class="row g-3">
+          <div class="col-12">
+            <div class="panel">
+              <div class="section-title"><i class="fas fa-industry"></i>เหล็ก</div>
+              <div class="table-responsive">
+                <table class="table table-sm table-hover align-middle mb-0">
+                  <thead class="table-light">
+                    <tr>
+                      <th>กลุ่ม</th>
+                      <th>ประเภท</th>
+                      <th class="text-end">กก.</th>
+                      <th style="width:170px">สัดส่วน</th>
+                    </tr>
+                  </thead>
+                  <tbody id="ironTypeRows"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          <div class="col-12">
+            <div class="panel">
+              <div class="section-title"><i class="fas fa-cubes"></i>ปูน/คอนกรีต</div>
+              <div class="table-responsive">
+                <table class="table table-sm table-hover align-middle mb-0">
+                  <thead class="table-light">
+                    <tr>
+                      <th>กลุ่ม</th>
+                      <th>ประเภท</th>
+                      <th class="text-end">กก.</th>
+                      <th style="width:170px">สัดส่วน</th>
+                    </tr>
+                  </thead>
+                  <tbody id="concreteTypeRows"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-7 d-none">
+        <div class="panel h-100">
+          <div class="section-title"><i class="fas fa-layer-group"></i>น้ำหนักตามประเภทวัสดุ</div>
+          <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th>กลุ่ม</th>
+                  <th>ประเภท</th>
+                  <th class="text-end">กก.</th>
+                  <th style="width:170px">สัดส่วน</th>
+                </tr>
+              </thead>
+              <tbody id="typeRows"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-5">
+        <div class="panel h-100">
+          <div class="section-title"><i class="fas fa-history"></i>คำขอล่าสุด</div>
+          <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th>รหัส</th>
+                  <th>สาขา</th>
+                  <th>ผู้ส่ง</th>
+                  <th class="text-center">สถานะ</th>
+                </tr>
+              </thead>
+              <tbody id="recentRows"></tbody>
+            </table>
           </div>
         </div>
       </div>
     </div>
-
-    <!-- Weight by scrap type breakdown table -->
-    <div class="card shadow-sm mb-4">
-      <div class="card-body">
-        <p class="section-label"><i class="fas fa-weight-hanging me-1"></i>น้ำหนักแต่ละประเภทเศษเหล็ก</p>
-        <div class="table-responsive">
-          <table class="table table-sm table-hover align-middle mb-0" id="typeTable">
-            <thead class="table-light">
-              <tr>
-                <th style="width:140px">กลุ่ม</th>
-                <th>ประเภท</th>
-                <th class="text-end" style="width:140px">น้ำหนัก (กก.)</th>
-                <th style="width:200px">สัดส่วน</th>
-              </tr>
-            </thead>
-            <tbody id="typeTbody">
-              <tr>
-                <td colspan="4" class="text-center text-muted py-3">กำลังโหลด...</td>
-              </tr>
-            </tbody>
-            <tfoot id="typeTfoot"></tfoot>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- Recent submissions -->
-    <div class="card shadow-sm mb-4">
-      <div class="card-body">
-        <p class="section-label"><i class="fas fa-history me-1"></i>คำขอล่าสุด 8 รายการ</p>
-        <div class="table-responsive">
-          <table class="table table-hover table-sm table-recent mb-0">
-            <thead class="table-light">
-              <tr>
-                <th>รหัสอ้างอิง</th>
-                <th>สาขา</th>
-                <th>ผู้ส่ง</th>
-                <th class="text-center">สถานะ</th>
-                <th>วันที่ส่ง</th>
-              </tr>
-            </thead>
-            <tbody id="recentTbody">
-              <tr>
-                <td colspan="5" class="text-center text-muted py-3">กำลังโหลด...</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-  </div><!-- /container -->
+  </div>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
   <script src="/nav-unified.js"></script>
   <script>
-    let chartDay = null;
-    let chartType = null;
-    let chartArea = null;
-    let chartBranch = null;
+    const appState = {
+      charts: {},
+      user: null,
+    };
 
-    const STATUS_TH = { pending: 'รออนุมัติ', approved: 'อนุมัติแล้ว', rejected: 'ปฏิเสธ', completed: 'เสร็จสิ้น' };
-    const GROUP_TH = { thin: 'เหล็กบาง', thick: 'เหล็กหนา', special: 'เหล็กหนาพิเศษ' };
+    const statusConfig = [
+      { key: 'pending', label: 'รออนุมัติ', icon: 'fa-clock', color: '#b45309', bg: '#fff7ed', border: '#fed7aa' },
+      { key: 'approved', label: 'อนุมัติแล้ว', icon: 'fa-check-circle', color: '#1d4ed8', bg: '#eff6ff', border: '#bfdbfe' },
+      { key: 'completed', label: 'เสร็จสิ้น', icon: 'fa-flag-checkered', color: '#047857', bg: '#ecfdf5', border: '#a7f3d0' },
+      { key: 'rejected', label: 'ปฏิเสธ', icon: 'fa-times-circle', color: '#b91c1c', bg: '#fef2f2', border: '#fecaca' },
+    ];
 
-    const TYPE_GROUPS = {
+    const kpiConfig = [
+      { key: 'total', label: 'คำขอทั้งหมด', icon: 'fa-clipboard-list', color: '#123455', bg: '#eef5ff', source: d => d.counts.total },
+      { key: 'pending', label: 'รออนุมัติ', icon: 'fa-clock', color: '#b45309', bg: '#fff7ed', source: d => d.counts.pending },
+      { key: 'approved', label: 'อนุมัติแล้ว', icon: 'fa-check-circle', color: '#1d4ed8', bg: '#eff6ff', source: d => d.counts.approved },
+      { key: 'completed', label: 'เสร็จสิ้น', icon: 'fa-flag-checkered', color: '#047857', bg: '#ecfdf5', source: d => d.counts.completed },
+      { key: 'rejected', label: 'ปฏิเสธ', icon: 'fa-times-circle', color: '#b91c1c', bg: '#fef2f2', source: d => d.counts.rejected },
+      { key: 'weight', label: 'น้ำหนักรวม (กก.)', icon: 'fa-weight-hanging', color: '#374151', bg: '#f8fafc', source: d => fmtWeight(d.totalWeight) },
+    ];
+
+    const groupConfig = [
+      { key: 'thin', label: 'เหล็กบาง', color: '#2563eb', bg: '#eff6ff' },
+      { key: 'thick', label: 'เหล็กหนา', color: '#d97706', bg: '#fffbeb' },
+      { key: 'special', label: 'เหล็กหนาพิเศษ', color: '#be185d', bg: '#fdf2f8' },
+      { key: 'concrete_general', label: 'คอนกรีตทั่วไป', color: '#059669', bg: '#ecfdf5' },
+      { key: 'concrete_quality', label: 'คอนกรีตทดสอบ/งานซ่อม', color: '#0f766e', bg: '#f0fdfa' },
+    ];
+
+    const materialSections = [
+      { key: 'iron', label: 'เหล็ก', icon: 'fa-industry', groups: ['thin', 'thick', 'special'] },
+      { key: 'concrete', label: 'ปูน/คอนกรีต', icon: 'fa-cubes', groups: ['concrete_general', 'concrete_quality'] },
+    ];
+
+    const typeGroups = {
       thin: ['thin_1', 'thin_2', 'thin_3', 'thin_4'],
       thick: ['thick_1', 'thick_2'],
       special: ['special_1'],
+      concrete_general: ['concrete_plant', 'concrete_factory_product_test', 'concrete_site_defect', 'concrete_wrong_spec', 'concrete_transfer', 'concrete_site', 'concrete_structure'],
+      concrete_quality: ['concrete_cube', 'concrete_sludge', 'concrete_grind'],
     };
-    const TYPE_LABELS = {
-      thin_1: 'เศษลวดหัวแบ่ง',
+
+    const typeLabels = {
+      thin_1: 'เศษลวดหัวแบ่ง(PCY)',
       thin_2: 'สายแพ็คเหล็ก',
       thin_3: 'เศษลวดปลอก',
       thin_4: 'ลวดผูกเหล็กรัดลวดปลอก',
       thick_1: 'เศษเหล็กโดเวล',
-      thick_2: 'เหล็กรูปพรรณเศษชิ้นส่วนเครื่องจักร/เศษเหล็กเพลท',
-      special_1: 'เศษเหล็กแผ่นจากการตัดเพลทเครื่องตัดพลาสม่า',
+      thick_2: 'เหล็กรูปพรรณ/เศษเครื่องจักร/เศษเพลท',
+      special_1: 'เศษเหล็กแผ่นจากเครื่องตัดพลาสม่า',
+      concrete_plant: 'เศษคอนกรีตจากโรงงานผลิต',
+      concrete_factory_product_test: 'เศษผลิตภัณฑ์คอนกรีตในโรงงานและเศษจากผลิตภัณฑ์ที่ทำการทดสอบ/เทส',
+      concrete_site_defect: 'เศษผลิตภัณฑ์ชำรุดหน้างาน',
+      concrete_wrong_spec: 'เศษผลิตภัณฑ์ที่ผิดแปลสภาพ',
+      concrete_transfer: 'เศษคอนกรีตระหว่างขนส่ง',
+      concrete_site: 'เศษคอนกรีตบริเวณหน้างาน',
+      concrete_structure: 'เศษคอนกรีตจากงานรื้อ/ซ่อมโครงสร้าง',
+      concrete_cube: 'ลูกปูนเทสต์',
+      concrete_sludge: 'เศษงานสลัดจ์',
+      concrete_grind: 'เศษงานเจียร/สกัดคอนกรีต',
     };
-    const GROUP_COLORS = { thin: '#3b82f6', thick: '#f59e0b', special: '#ec4899' };
+
+    function fmtNumber(value) {
+      return Number(value || 0).toLocaleString('th-TH');
+    }
+
+    function fmtWeight(value, digits = 1) {
+      return Number(value || 0).toLocaleString('th-TH', {
+        minimumFractionDigits: digits,
+        maximumFractionDigits: digits,
+      });
+    }
+
+    function esc(value) {
+      return String(value || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    function setLoading() {
+      document.getElementById('kpiRow').innerHTML = Array.from({ length: 6 }).map(() =>
+        '<div class="col-6 col-md-4 col-lg-2"><div class="stat-card placeholder-glow"><span class="placeholder col-4"></span><span class="placeholder col-9 mt-3"></span><span class="placeholder col-7 mt-2"></span></div></div>'
+      ).join('');
+      document.getElementById('workQueue').innerHTML = '<div class="empty-state"><div class="spinner-border spinner-border-sm me-1"></div>กำลังโหลด...</div>';
+    }
+
+    function showFatal(message) {
+      document.getElementById('kpiRow').innerHTML = `<div class="col-12"><div class="alert alert-danger mb-0">${esc(message)}</div></div>`;
+      ['workQueue', 'quickActions', 'typeRows', 'recentRows', 'groupLegend'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = '';
+      });
+    }
+
+    async function init() {
+      try {
+        const res = await fetch('/api/auth/me');
+        if (!res.ok) {
+          window.location.replace('/login.html');
+          return;
+        }
+
+        appState.user = await res.json();
+        if (!['approver', 'ex', 'superadmin', 'managerial'].includes(appState.user.role)) {
+          window.location.replace('/login.html');
+          return;
+        }
+
+        document.getElementById('userInfo').textContent = `${appState.user.fullName} (${appState.user.employeeId})`;
+        configureNavigation(appState.user);
+        await loadDashboard();
+      } catch {
+        window.location.replace('/login.html');
+      }
+    }
+
+    function configureNavigation(user) {
+      const back = document.getElementById('primaryBackLink');
+      const byRole = {
+        approver: { href: '/approve.html', label: 'อนุมัติ', icon: 'fa-tasks' },
+        ex: { href: '/approve.html', label: 'อนุมัติขาย', icon: 'fa-coins' },
+        managerial: { href: '/managerial.html', label: 'รายงาน', icon: 'fa-recycle' },
+        superadmin: { href: '/requests.html', label: 'คำขอ', icon: 'fa-list-check' },
+      };
+      const target = byRole[user.role] || byRole.approver;
+      back.href = target.href;
+      back.title = target.label;
+      back.querySelector('i').className = `fas ${target.icon}`;
+      back.querySelector('.btn-label').textContent = target.label;
+    }
+
+    async function logout() {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      window.location.replace('/login.html');
+    }
 
     async function loadDashboard() {
+      setLoading();
       try {
         const res = await fetch('/api/dashboard');
-        if (!res.ok) { console.error('dashboard fetch failed'); return; }
-        const d = await res.json();
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'โหลดข้อมูลไม่สำเร็จ');
+
+        document.getElementById('scopeLabel').textContent = data.scope?.label || 'ภาพรวมทั้งระบบ';
         document.getElementById('lastUpdate').textContent = new Date().toLocaleString('th-TH');
-        renderKPI(d);
-        renderDay(d.weightByDay);
-        renderType(d.weightByGroup);
-        renderArea(d.weightByArea);
-        renderBranch(d);
-        renderTypeTable(d.weightByType, d.totalWeight);
-        renderRecent(d.recentSubmissions);
-        if (d.userStats) renderUserStats(d.userStats);
-      } catch (e) { console.error(e); }
-    }
 
-    // ── KPI ──────────────────────────────────────────────────────────────────────
-    function renderKPI(d) {
-      document.getElementById('kpiTotal').textContent = d.counts.total;
-      document.getElementById('kpiPending').textContent = d.counts.pending;
-      document.getElementById('kpiApproved').textContent = d.counts.approved;
-      document.getElementById('kpiRejected').textContent = d.counts.rejected;
-      document.getElementById('kpiCompleted').textContent = d.counts.completed;
-      document.getElementById('kpiWeight').textContent = d.totalWeight.toLocaleString('th-TH', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
-    }
-
-    // ── User stats ────────────────────────────────────────────────────────────────
-    function renderUserStats(u) {
-      document.getElementById('uSubmitter').textContent = u.submitter || 0;
-      document.getElementById('uApprover').textContent = u.approver || 0;
-      document.getElementById('uSuperadmin').textContent = u.superadmin || 0;
-    }
-
-    // ── Day trend bar ─────────────────────────────────────────────────────────────
-    function renderDay(data) {
-      // Fill missing dates in last 14 days
-      const today = new Date();
-      const map = {};
-      data.forEach(d => { map[d.date] = d.weight; });
-      const labels = [], values = [];
-      for (let i = 13; i >= 0; i--) {
-        const dt = new Date(today);
-        dt.setDate(dt.getDate() - i);
-        const key = dt.toISOString().split('T')[0];
-        labels.push(dt.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' }));
-        values.push(map[key] || 0);
+        renderKpis(data);
+        renderWorkQueue(data);
+        renderQuickActions(appState.user);
+        renderGroupChart(data.weightByGroup || {});
+        renderDayChart(data.weightByDay || []);
+        renderAreaChart(data.weightByArea || []);
+        renderBranchChart(data);
+        renderAdminStats(data.userStats);
+        renderTypeRows(data.weightByType || {}, data.totalWeight || 0);
+        renderRecentRows(data.recentSubmissions || []);
+      } catch (err) {
+        showFatal(err.message || 'โหลดข้อมูลไม่สำเร็จ');
       }
-      if (chartDay) chartDay.destroy();
-      chartDay = new Chart(document.getElementById('chartDay'), {
-        type: 'bar',
-        data: {
-          labels,
-          datasets: [{
-            label: 'น้ำหนัก (กก.)',
-            data: values,
-            backgroundColor: 'rgba(37,99,168,0.7)',
-            borderColor: '#1a3a5c',
-            borderWidth: 1,
-            borderRadius: 4,
-          }]
-        },
-        options: {
-          responsive: true, maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
-          scales: {
-            y: { beginAtZero: true, ticks: { font: { size: 11 } } },
-            x: { ticks: { font: { size: 11 } } }
-          }
-        }
-      });
     }
 
-    // ── Type breakdown table ─────────────────────────────────────────────────────
-    function renderTypeTable(weightByType, totalWeight) {
-      const tbody = document.getElementById('typeTbody');
-      const tfoot = document.getElementById('typeTfoot');
-      let rows = '';
-      for (const [group, types] of Object.entries(TYPE_GROUPS)) {
-        const groupColor = GROUP_COLORS[group];
-        let groupTotal = 0;
-        const typeRows = types.map(t => {
-          const w = weightByType[t] || 0;
-          groupTotal += w;
-          const pct = totalWeight ? ((w / totalWeight) * 100).toFixed(1) : '0.0';
-          const barW = totalWeight ? Math.round((w / totalWeight) * 100) : 0;
-          return `<tr>
-        <td></td>
-        <td class="small">${TYPE_LABELS[t] || t}</td>
-        <td class="text-end fw-semibold">${w > 0 ? w.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '<span class="text-muted">–</span>'}</td>
-        <td>
-          <div class="d-flex align-items-center gap-2">
-            <div class="progress flex-grow-1" style="height:8px">
-              <div class="progress-bar" style="width:${barW}%;background:${groupColor}" role="progressbar"></div>
-            </div>
-            <small class="text-muted" style="width:38px;text-align:right">${pct}%</small>
+    function renderKpis(data) {
+      document.getElementById('kpiRow').innerHTML = kpiConfig.map(kpi => `
+        <div class="col-6 col-md-4 col-lg-2">
+          <div class="stat-card">
+            <span class="stat-icon" style="background:${kpi.bg};color:${kpi.color}">
+              <i class="fas ${kpi.icon}"></i>
+            </span>
+            <div class="stat-value" style="color:${kpi.color}">${kpi.source(data)}</div>
+            <div class="stat-label">${kpi.label}</div>
           </div>
-        </td>
-      </tr>`;
-        });
-        const groupPct = totalWeight ? ((groupTotal / totalWeight) * 100).toFixed(1) : '0.0';
-        rows += `<tr class="table-light">
-      <td colspan="2" class="fw-bold small" style="color:${groupColor}">
-        <span class="d-inline-block rounded me-2" style="width:10px;height:10px;background:${groupColor}"></span>
-        ${GROUP_TH[group]}
-      </td>
-      <td class="text-end fw-bold">${groupTotal > 0 ? groupTotal.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '–'}</td>
-      <td><small class="text-muted">${groupPct}%</small></td>
-    </tr>`;
-        rows += typeRows.join('');
-      }
-      tbody.innerHTML = rows;
-      tfoot.innerHTML = `<tr class="table-secondary fw-bold">
-    <td colspan="2">รวมทั้งหมด</td>
-    <td class="text-end">${totalWeight.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} กก.</td>
-    <td></td>
-  </tr>`;
+        </div>
+      `).join('');
     }
 
-    // ── Type doughnut ─────────────────────────────────────────────────────────────
-    function renderType(wg) {
-      const labels = [GROUP_TH.thin, GROUP_TH.thick, GROUP_TH.special];
-      const values = [wg.thin, wg.thick, wg.special];
-      const colors = ['#3b82f6', '#f59e0b', '#ec4899'];
-      if (chartType) chartType.destroy();
-      chartType = new Chart(document.getElementById('chartType'), {
-        type: 'doughnut',
-        data: {
-          labels,
-          datasets: [{ data: values, backgroundColor: colors, borderWidth: 2 }]
+    function renderWorkQueue(data) {
+      const items = [
+        {
+          label: 'คำขอรออนุมัติ',
+          value: data.counts.pending,
+          icon: 'fa-clock',
+          color: '#b45309',
+          href: (appState.user?.role === 'approver' || appState.user?.role === 'ex') ? '/approve.html' : '/requests.html',
         },
+        {
+          label: 'คำขอที่อนุมัติแล้ว',
+          value: data.counts.approved,
+          icon: 'fa-check-circle',
+          color: '#1d4ed8',
+          href: '/approve.html',
+        },
+        {
+          label: 'รายการเสร็จสิ้น',
+          value: data.counts.completed,
+          icon: 'fa-flag-checkered',
+          color: '#047857',
+          href: appState.user?.role === 'managerial' ? '/managerial.html' : '/history.html',
+        },
+      ];
+
+      document.getElementById('workQueue').innerHTML = items.map(item => `
+        <div class="col-md-4">
+          <a class="quick-action h-100" href="${item.href}">
+            <i class="fas ${item.icon}" style="color:${item.color}"></i>
+            <span>
+              <span class="d-block fw-bold" style="color:${item.color};font-size:1.35rem">${fmtNumber(item.value)}</span>
+              <span class="soft-note">${item.label}</span>
+            </span>
+          </a>
+        </div>
+      `).join('');
+    }
+
+    function renderQuickActions(user) {
+      const allActions = [
+        { roles: ['approver'], href: '/approve.html', icon: 'fa-tasks', label: 'อนุมัติคำขอ', note: 'ตรวจรายการที่รออนุมัติ' },
+        { roles: ['ex'], href: '/approve.html', icon: 'fa-coins', label: 'อนุมัติขายออก', note: 'ตรวจรายการขายที่รออนุมัติ' },
+        { roles: ['managerial'], href: '/managerial.html', icon: 'fa-recycle', label: 'รายงานทิ้ง', note: 'ดูรายการที่ทิ้งแล้ว' },
+        { roles: ['managerial'], href: '/selling.html', icon: 'fa-coins', label: 'ขายออก', note: 'บันทึกการขายเศษวัสดุ' },
+        { roles: ['approver', 'ex', 'managerial'], href: '/history.html', icon: 'fa-exchange-alt', label: 'ประวัติสต็อก', note: 'ตรวจเข้า-ออกและยอดคงเหลือ' },
+        { roles: ['superadmin'], href: '/requests.html', icon: 'fa-list-check', label: 'คำขอทั้งหมด', note: 'ดูคำขอในระบบ' },
+        { roles: ['superadmin'], href: '/admin.html', icon: 'fa-users-cog', label: 'จัดการผู้ใช้', note: 'เพิ่มและแก้ไขสิทธิ์' },
+      ];
+
+      const actions = allActions.filter(action => action.roles.includes(user.role)).slice(0, 4);
+      document.getElementById('quickActions').innerHTML = actions.map(action => `
+        <a class="quick-action" href="${action.href}">
+          <i class="fas ${action.icon}"></i>
+          <span>
+            <span class="d-block fw-semibold">${action.label}</span>
+            <span class="soft-note">${action.note}</span>
+          </span>
+        </a>
+      `).join('');
+    }
+
+    function renderGroupChart(weightByGroup) {
+      const labels = groupConfig.map(g => g.label);
+      const values = groupConfig.map(g => Number(weightByGroup[g.key] || 0));
+      const colors = groupConfig.map(g => g.color);
+      drawChart('group', 'chartGroup', {
+        type: 'doughnut',
+        data: { labels, datasets: [{ data: values, backgroundColor: colors, borderWidth: 2 }] },
         options: {
-          responsive: true, maintainAspectRatio: false,
+          responsive: true,
+          maintainAspectRatio: false,
           cutout: '62%',
-          plugins: { legend: { display: false } }
-        }
+          plugins: { legend: { display: false } },
+        },
       });
-      // Custom legend
-      const total = values.reduce((a, b) => a + b, 0);
-      document.getElementById('typeLegend').innerHTML = labels.map((l, i) => {
+
+      const total = values.reduce((sum, value) => sum + value, 0);
+      document.getElementById('groupLegend').innerHTML = groupConfig.map((group, i) => {
         const pct = total ? ((values[i] / total) * 100).toFixed(1) : '0.0';
-        return `<div class="d-flex justify-content-between align-items-center mb-1">
-      <span><span class="d-inline-block rounded me-1" style="width:12px;height:12px;background:${colors[i]}"></span>
-      <small>${l}</small></span>
-      <small class="text-muted fw-semibold">${values[i].toLocaleString('th-TH', { maximumFractionDigits: 1 })} กก. (${pct}%)</small>
-    </div>`;
+        return `
+          <div class="d-flex justify-content-between align-items-center gap-2 mb-1">
+            <span class="text-truncate">
+              <span class="d-inline-block rounded me-1" style="width:10px;height:10px;background:${group.color}"></span>
+              <small>${group.label}</small>
+            </span>
+            <small class="text-muted fw-semibold">${fmtWeight(values[i])} กก. (${pct}%)</small>
+          </div>
+        `;
       }).join('');
     }
 
-    // ── Area horizontal bar ───────────────────────────────────────────────────────
-    function renderArea(data) {
-      const labels = data.map(d => d.area);
-      const values = data.map(d => d.weight);
-      if (chartArea) chartArea.destroy();
-      chartArea = new Chart(document.getElementById('chartArea'), {
-        type: 'bar',
-        data: {
-          labels,
-          datasets: [{
-            label: 'น้ำหนัก (กก.)',
-            data: values,
-            backgroundColor: 'rgba(16,185,129,0.75)',
-            borderColor: '#065f46',
-            borderWidth: 1,
-            borderRadius: 4,
-          }]
-        },
-        options: {
-          indexAxis: 'y',
-          responsive: true, maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
-          scales: {
-            x: { beginAtZero: true, ticks: { font: { size: 11 } } },
-            y: { ticks: { font: { size: 11 } } }
-          }
-        }
-      });
-    }
+    function renderDayChart(rows) {
+      const today = new Date();
+      const byDate = Object.fromEntries(rows.map(row => [row.date, Number(row.weight || 0)]));
+      const labels = [];
+      const values = [];
 
-    // ── Branch bar / status bar ───────────────────────────────────────────────────
-    function renderBranch(d) {
-      const isSuperAdmin = currentUser && currentUser.role === 'superadmin';
-      let labels, values, color;
-      if (isSuperAdmin && d.weightByBranch.length > 0) {
-        labels = d.weightByBranch.map(x => x.branch);
-        values = d.weightByBranch.map(x => x.weight);
-        color = 'rgba(139,92,246,0.75)';
-      } else {
-        // Status breakdown chart for submitter (or when no branch data)
-        document.getElementById('chart3Label').innerHTML =
-          '<i class="fas fa-chart-bar me-1"></i>สรุปตามสถานะ';
-        labels = ['รออนุมัติ', 'อนุมัติแล้ว', 'ปฏิเสธ', 'เสร็จสิ้น'];
-        values = [d.counts.pending, d.counts.approved, d.counts.rejected, d.counts.completed];
-        color = ['rgba(245,158,11,.8)', 'rgba(59,130,246,.8)', 'rgba(239,68,68,.8)', 'rgba(16,185,129,.8)'];
+      for (let i = 13; i >= 0; i--) {
+        const date = new Date(today);
+        date.setDate(date.getDate() - i);
+        const key = date.toISOString().slice(0, 10);
+        labels.push(date.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' }));
+        values.push(byDate[key] || 0);
       }
-      if (chartBranch) chartBranch.destroy();
-      chartBranch = new Chart(document.getElementById('chartBranch'), {
+
+      drawChart('day', 'chartDay', {
         type: 'bar',
         data: {
           labels,
           datasets: [{
-            label: isSuperAdmin ? 'น้ำหนัก (กก.)' : 'จำนวน',
             data: values,
-            backgroundColor: Array.isArray(color) ? color : values.map(() => color),
-            borderWidth: 1,
+            backgroundColor: '#5b8ec1',
             borderRadius: 4,
-          }]
+            label: 'น้ำหนัก (กก.)',
+          }],
         },
-        options: {
-          responsive: true, maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
-          scales: {
-            y: { beginAtZero: true, ticks: { font: { size: 11 } } },
-            x: { ticks: { font: { size: 11 } } }
-          }
-        }
+        options: baseBarOptions(),
       });
     }
 
-    // ── Recent table ──────────────────────────────────────────────────────────────
-    function renderRecent(rows) {
-      const tbody = document.getElementById('recentTbody');
-      if (!rows || rows.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3">ยังไม่มีข้อมูล</td></tr>';
+    function renderAreaChart(rows) {
+      drawChart('area', 'chartArea', {
+        type: 'bar',
+        data: {
+          labels: rows.map(row => row.area),
+          datasets: [{
+            data: rows.map(row => Number(row.weight || 0)),
+            backgroundColor: '#4aa884',
+            borderRadius: 4,
+            label: 'น้ำหนัก (กก.)',
+          }],
+        },
+        options: { ...baseBarOptions(), indexAxis: 'y' },
+      });
+    }
+
+    function renderBranchChart(data) {
+      const isSingleBranch = Boolean(data.scope?.branch);
+      const labels = isSingleBranch
+        ? statusConfig.map(s => s.label)
+        : (data.weightByBranch || []).map(row => row.branch);
+      const values = isSingleBranch
+        ? statusConfig.map(s => data.counts[s.key] || 0)
+        : (data.weightByBranch || []).map(row => Number(row.weight || 0));
+      const colors = isSingleBranch ? statusConfig.map(s => s.color) : values.map(() => '#7c8da6');
+
+      document.getElementById('branchPanelTitle').innerHTML = isSingleBranch
+        ? '<i class="fas fa-chart-bar"></i>สรุปตามสถานะ'
+        : '<i class="fas fa-building"></i>น้ำหนักตามสาขา';
+
+      drawChart('branch', 'chartBranch', {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            data: values,
+            backgroundColor: colors,
+            borderRadius: 4,
+            label: isSingleBranch ? 'จำนวน' : 'น้ำหนัก (กก.)',
+          }],
+        },
+        options: baseBarOptions(),
+      });
+    }
+
+    function renderAdminStats(stats) {
+      const wrap = document.getElementById('adminStatsWrap');
+      if (!stats) {
+        wrap.style.display = 'none';
         return;
       }
-      tbody.innerHTML = rows.map(r => {
-        const stBadge = `<span class="badge badge-${r.status} rounded-pill px-2">${STATUS_TH[r.status] || r.status}</span>`;
-        const dt = new Date(r.submittedAt).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit', hour: '2-digit', minute: '2-digit' });
-        const shortId = r.id.split('-')[0].toUpperCase();
-        return `<tr>
-      <td><code class="small">${shortId}…</code></td>
-      <td>${r.branch || '–'}</td>
-      <td>${r.collectorName}</td>
-      <td class="text-center">${stBadge}</td>
-      <td class="text-muted">${dt}</td>
-    </tr>`;
-      }).join('');
+
+      wrap.style.display = '';
+      const roles = [
+        ['submitter', 'พนักงานส่งฟอร์ม', 'fa-user'],
+        ['approver', 'ผู้อนุมัติ', 'fa-user-check'],
+        ['ex', 'Executive', 'fa-user-tie'],
+        ['managerial', 'Managerial', 'fa-user-tie'],
+        ['superadmin', 'SuperAdmin', 'fa-user-shield'],
+      ];
+
+      document.getElementById('adminStats').innerHTML = roles.map(([key, label, icon]) => `
+        <div class="col-6 col-md-3">
+          <div class="stat-card">
+            <span class="stat-icon" style="background:#eef5ff;color:#1f5f9b"><i class="fas ${icon}"></i></span>
+            <div class="stat-value">${fmtNumber(stats[key] || 0)}</div>
+            <div class="stat-label">${label}</div>
+          </div>
+        </div>
+      `).join('');
     }
+
+    function renderTypeRows(weightByType, totalWeight) {
+      const rows = [];
+      const groupByKey = Object.fromEntries(groupConfig.map(group => [group.key, group]));
+      const sectionTableRows = {};
+
+      materialSections.forEach(section => {
+        const sectionRows = [];
+        let sectionTotal = 0;
+
+        section.groups.forEach(groupKey => {
+          const group = groupByKey[groupKey];
+          if (!group) return;
+
+          (typeGroups[group.key] || []).forEach(type => {
+            const weight = Number(weightByType[type] || 0);
+            if (weight <= 0) return;
+            sectionTotal += weight;
+            const pct = totalWeight ? (weight / totalWeight) * 100 : 0;
+            sectionRows.push(`
+              <tr>
+                <td><span class="group-pill" style="background:${group.bg};border-color:${group.color}33;color:${group.color}">${group.label}</span></td>
+                <td>${esc(typeLabels[type] || type)}</td>
+                <td class="text-end fw-semibold">${fmtWeight(weight, 2)}</td>
+                <td>
+                  <div class="d-flex align-items-center gap-2">
+                    <div class="progress flex-grow-1">
+                      <div class="progress-bar" style="width:${Math.round(pct)}%;background:${group.color}"></div>
+                    </div>
+                    <small class="text-muted" style="width:42px;text-align:right">${pct.toFixed(1)}%</small>
+                  </div>
+                </td>
+              </tr>
+            `);
+          });
+        });
+
+        if (!sectionRows.length) return;
+
+        const sectionPct = totalWeight ? (sectionTotal / totalWeight) * 100 : 0;
+        sectionTableRows[section.key] = [`
+          <tr class="type-section-row">
+            <td colspan="2">
+              <i class="fas ${section.icon} me-1"></i>รวม${section.label}
+              <span class="type-section-meta">${sectionPct.toFixed(1)}%</span>
+            </td>
+            <td class="text-end">${fmtWeight(sectionTotal, 2)}</td>
+            <td></td>
+          </tr>
+        `, ...sectionRows].join('');
+        rows.push(`
+          <tr class="type-section-row">
+            <td colspan="2">
+              <i class="fas ${section.icon} me-1"></i>${section.label}
+              <span class="type-section-meta">${sectionPct.toFixed(1)}%</span>
+            </td>
+            <td class="text-end">${fmtWeight(sectionTotal, 2)}</td>
+            <td></td>
+          </tr>
+        `);
+        rows.push(...sectionRows);
+      });
+
+      const emptyRow = '<tr><td colspan="4" class="empty-state">ยังไม่มีข้อมูลน้ำหนัก</td></tr>';
+      document.getElementById('ironTypeRows').innerHTML = sectionTableRows.iron || emptyRow;
+      document.getElementById('concreteTypeRows').innerHTML = sectionTableRows.concrete || emptyRow;
+
+      document.getElementById('typeRows').innerHTML = rows.length
+        ? rows.join('')
+        : '<tr><td colspan="4" class="empty-state">ยังไม่มีข้อมูลน้ำหนัก</td></tr>';
+    }
+
+    function renderRecentRows(rows) {
+      document.getElementById('recentRows').innerHTML = rows.length
+        ? rows.map(row => {
+          const status = statusConfig.find(s => s.key === row.status);
+          const badge = status
+            ? `<span class="status-pill" style="background:${status.bg};border-color:${status.border};color:${status.color}">${status.label}</span>`
+            : `<span class="status-pill bg-light text-secondary">${esc(row.status)}</span>`;
+          return `
+            <tr>
+              <td><code>${esc(String(row.id || '').slice(0, 8).toUpperCase())}</code></td>
+              <td>${esc(row.branch || '-')}</td>
+              <td>${esc(row.collectorName || '-')}</td>
+              <td class="text-center">${badge}</td>
+            </tr>
+          `;
+        }).join('')
+        : '<tr><td colspan="4" class="empty-state">ยังไม่มีคำขอ</td></tr>';
+    }
+
+    function drawChart(key, canvasId, config) {
+      const canvas = document.getElementById(canvasId);
+      if (!canvas) return;
+
+      const wrap = canvas.parentElement;
+      const existingFallback = wrap?.querySelector('.chart-fallback');
+
+      if (typeof Chart === 'undefined') {
+        canvas.style.display = 'none';
+        if (!existingFallback && wrap) {
+          const fallback = document.createElement('div');
+          fallback.className = 'chart-fallback';
+          fallback.textContent = 'โหลดกราฟไม่ได้ แต่ข้อมูลสรุปด้านล่างยังแสดงตามปกติ';
+          wrap.appendChild(fallback);
+        }
+        return;
+      }
+
+      if (existingFallback) existingFallback.remove();
+      canvas.style.display = '';
+      if (appState.charts[key]) appState.charts[key].destroy();
+      appState.charts[key] = new Chart(canvas, config);
+    }
+
+    function baseBarOptions() {
+      return {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { font: { size: 11 } }, grid: { display: false } },
+          y: { beginAtZero: true, ticks: { font: { size: 11 } } },
+        },
+      };
+    }
+
+    init();
   </script>
 </body>
 

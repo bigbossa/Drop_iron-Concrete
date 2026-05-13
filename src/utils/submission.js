@@ -1,5 +1,16 @@
 const { TYPE_GROUPS, TYPE_LABELS, GROUP_LABELS } = require('../constants/scrap');
 
+const TYPE_KEY_BY_LABEL = Object.fromEntries(
+  Object.entries(TYPE_LABELS).map(([k, v]) => [String(v || '').trim(), k])
+);
+
+function normalizeTypeKey(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  if (Object.prototype.hasOwnProperty.call(TYPE_LABELS, raw)) return raw;
+  return TYPE_KEY_BY_LABEL[raw] || raw;
+}
+
 function buildTypeBreakdown(items) {
   const bd = {};
   for (const [group, types] of Object.entries(TYPE_GROUPS)) {
@@ -10,7 +21,7 @@ function buildTypeBreakdown(items) {
   }
 
   for (const it of items) {
-    const st = it.scrap_type || it.scrapType || '';
+    const st = normalizeTypeKey(it.scrap_type || it.scrapType || '');
     const w = parseFloat(it.weight) || 0;
     for (const [group, types] of Object.entries(TYPE_GROUPS)) {
       if (types.includes(st)) {
@@ -55,19 +66,43 @@ function rowToSub(row, items = []) {
 
 function parseItems(body, fileMap) {
   const items = [];
-  let i = 0;
-  while (body[`date_${i}`] !== undefined) {
+  const indexSet = new Set();
+
+  Object.keys(body || {}).forEach((k) => {
+    const m = k.match(/^(date|scrapArea|scrapType|weight|bringer)_(\d+)$/);
+    if (m) indexSet.add(Number(m[2]));
+  });
+  Object.keys(fileMap || {}).forEach((k) => {
+    const m = k.match(/^(weighingPhoto|ocrPhoto)_(\d+)$/);
+    if (m) indexSet.add(Number(m[2]));
+  });
+
+  const indices = Array.from(indexSet).sort((a, b) => a - b);
+  for (const i of indices) {
+    const date = (body[`date_${i}`] || '').trim() || null;
+    const scrapArea = (body[`scrapArea_${i}`] || '').trim();
+    const scrapType = normalizeTypeKey((body[`scrapType_${i}`] || '').trim());
+    const weight = parseFloat(body[`weight_${i}`]) || 0;
+    const bringer = (body[`bringer_${i}`] || '').trim();
+    const weighingPhoto = fileMap[`weighingPhoto_${i}`] || null;
+    const ocrPhoto = fileMap[`ocrPhoto_${i}`] || null;
+
+    // Ignore placeholder rows that have no meaningful data.
+    if (!date && !scrapArea && !scrapType && !weight && !bringer && !weighingPhoto && !ocrPhoto) {
+      continue;
+    }
+
     items.push({
-      date: (body[`date_${i}`] || '').trim() || null,
-      scrapArea: (body[`scrapArea_${i}`] || '').trim(),
-      scrapType: (body[`scrapType_${i}`] || '').trim(),
-      weight: parseFloat(body[`weight_${i}`]) || 0,
-      bringer: (body[`bringer_${i}`] || '').trim(),
-      weighingPhoto: fileMap[`weighingPhoto_${i}`] || null,
-      ocrPhoto: fileMap[`ocrPhoto_${i}`] || null,
+      date,
+      scrapArea,
+      scrapType,
+      weight,
+      bringer,
+      weighingPhoto,
+      ocrPhoto,
     });
-    i += 1;
   }
+
   return items;
 }
 

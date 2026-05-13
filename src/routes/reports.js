@@ -16,6 +16,21 @@ function formatDateOnly(value) {
   return String(value).split('T')[0].split(' ')[0];
 }
 
+function resolveTypeGroup(scrapType) {
+  if (!scrapType) return null;
+  if (TYPE_GROUPS[scrapType]) return scrapType;
+  for (const [group, types] of Object.entries(TYPE_GROUPS)) {
+    if (types.includes(scrapType)) return group;
+  }
+  return null;
+}
+
+function emptyWeightByGroup() {
+  const out = {};
+  Object.keys(TYPE_GROUPS).forEach((k) => { out[k] = 0; });
+  return out;
+}
+
 router.get('/managerial/report', requireLogin, requireRole('managerial', 'superadmin'), async (req, res) => {
   try {
     const { pool } = req.app.locals;
@@ -84,12 +99,11 @@ router.get('/managerial/report', requireLogin, requireRole('managerial', 'supera
       params
     );
 
-    const weightByGroup = { thin: 0, thick: 0, special: 0 };
+    const weightByGroup = emptyWeightByGroup();
     const byType = typeRes.rows.map((r) => {
       const w = parseFloat(r.w) || 0;
-      for (const [group, types] of Object.entries(TYPE_GROUPS)) {
-        if (types.includes(r.scrap_type)) weightByGroup[group] += w;
-      }
+      const grp = resolveTypeGroup(r.scrap_type);
+      if (grp) weightByGroup[grp] += w;
       return {
         type: r.scrap_type,
         label: TYPE_LABELS[r.scrap_type] || r.scrap_type,
@@ -102,11 +116,9 @@ router.get('/managerial/report', requireLogin, requireRole('managerial', 'supera
         submissions: parseInt(totalRes.rows[0]?.cnt || 0, 10),
         weight: Math.round((parseFloat(totalRes.rows[0]?.w) || 0) * 100) / 100,
       },
-      weightByGroup: {
-        thin: Math.round(weightByGroup.thin * 100) / 100,
-        thick: Math.round(weightByGroup.thick * 100) / 100,
-        special: Math.round(weightByGroup.special * 100) / 100,
-      },
+      weightByGroup: Object.fromEntries(
+        Object.entries(weightByGroup).map(([k, v]) => [k, Math.round(v * 100) / 100])
+      ),
       byType,
       byLocation: locationRes.rows.map((r) => ({
         location: r.disposal_location || '(ไม่ระบุ)',
@@ -131,13 +143,22 @@ router.get('/managerial/report', requireLogin, requireRole('managerial', 'supera
   }
 });
 
-router.get('/dashboard', requireLogin, requireRole('approver', 'superadmin', 'managerial'), async (req, res) => {
+router.get('/dashboard', requireLogin, requireRole('approver', 'ex', 'superadmin', 'managerial'), async (req, res) => {
   try {
     const { pool } = req.app.locals;
-    const role = req.session.user.role;
+    const user = req.session.user;
+    const role = user.role;
     const isSuperAdmin = role === 'superadmin';
+    const scopedBranch = !isSuperAdmin && user.branch ? user.branch : null;
 
-    const statusRes = await pool.query(`SELECT status, COUNT(*) AS cnt FROM submissions GROUP BY status`);
+    const scopedWhere = scopedBranch ? 'WHERE branch = $1' : '';
+    const scopedParams = scopedBranch ? [scopedBranch] : [];
+    const scopedJoinWhere = scopedBranch ? 'WHERE s.branch = $1' : '';
+
+    const statusRes = await pool.query(
+      `SELECT status, COUNT(*) AS cnt FROM submissions ${scopedWhere} GROUP BY status`,
+      scopedParams
+    );
     const counts = { total: 0, pending: 0, approved: 0, rejected: 0, completed: 0 };
     for (const row of statusRes.rows) {
       const n = parseInt(row.cnt, 10);
@@ -149,10 +170,12 @@ router.get('/dashboard', requireLogin, requireRole('approver', 'superadmin', 'ma
       `SELECT si.scrap_type, SUM(si.weight) AS w
        FROM submission_items si
        JOIN submissions s ON s.id = si.submission_id
-       GROUP BY si.scrap_type`
+       ${scopedJoinWhere}
+       GROUP BY si.scrap_type`,
+      scopedParams
     );
 
-    const weightByGroup = { thin: 0, thick: 0, special: 0 };
+    const weightByGroup = emptyWeightByGroup();
     const weightByType = {};
     let totalWeight = 0;
 
@@ -160,9 +183,8 @@ router.get('/dashboard', requireLogin, requireRole('approver', 'superadmin', 'ma
       const w = parseFloat(row.w) || 0;
       totalWeight += w;
       weightByType[row.scrap_type] = Math.round(w * 100) / 100;
-      for (const [group, types] of Object.entries(TYPE_GROUPS)) {
-        if (types.includes(row.scrap_type)) weightByGroup[group] += w;
-      }
+      const grp = resolveTypeGroup(row.scrap_type);
+      if (grp) weightByGroup[grp] += w;
     }
 
     const dayRes = await pool.query(
@@ -170,45 +192,58 @@ router.get('/dashboard', requireLogin, requireRole('approver', 'superadmin', 'ma
        FROM submission_items si
        JOIN submissions s ON s.id = si.submission_id
        WHERE si.date >= CURRENT_DATE - INTERVAL '13 days'
+       ${scopedBranch ? 'AND s.branch = $1' : ''}
        GROUP BY d ORDER BY d`
+      ,
+      scopedParams
     );
 
     const areaRes = await pool.query(
       `SELECT si.scrap_area, SUM(si.weight) AS w
        FROM submission_items si
        JOIN submissions s ON s.id = si.submission_id
+       ${scopedJoinWhere}
        GROUP BY si.scrap_area ORDER BY w DESC LIMIT 8`
+      ,
+      scopedParams
     );
 
     const branchRes = await pool.query(
       `SELECT s.branch, SUM(si.weight) AS w
        FROM submission_items si
        JOIN submissions s ON s.id = si.submission_id
+       ${scopedJoinWhere}
        GROUP BY s.branch ORDER BY w DESC`
+      ,
+      scopedParams
     );
 
     const recentRes = await pool.query(
       `SELECT id, branch, collector_name, status, submitted_at
-       FROM submissions ORDER BY submitted_at DESC LIMIT 8`
+       FROM submissions ${scopedWhere} ORDER BY submitted_at DESC LIMIT 8`,
+      scopedParams
     );
 
     let userStats = null;
     if (isSuperAdmin) {
       const uRes = await pool.query(`SELECT role, COUNT(*) AS cnt FROM users WHERE is_active=TRUE GROUP BY role`);
-      userStats = { submitter: 0, approver: 0, superadmin: 0, managerial: 0 };
+      userStats = { submitter: 0, approver: 0, superadmin: 0, managerial: 0, ex: 0 };
       for (const r of uRes.rows) {
         userStats[r.role] = parseInt(r.cnt, 10);
       }
     }
 
     return res.json({
+      scope: {
+        role,
+        branch: scopedBranch,
+        label: scopedBranch ? `สาขา ${scopedBranch}` : 'ภาพรวมทั้งระบบ',
+      },
       counts,
       totalWeight: Math.round(totalWeight * 100) / 100,
-      weightByGroup: {
-        thin: Math.round(weightByGroup.thin * 100) / 100,
-        thick: Math.round(weightByGroup.thick * 100) / 100,
-        special: Math.round(weightByGroup.special * 100) / 100,
-      },
+      weightByGroup: Object.fromEntries(
+        Object.entries(weightByGroup).map(([k, v]) => [k, Math.round(v * 100) / 100])
+      ),
       weightByType,
       weightByDay: dayRes.rows.map((r) => ({
         date: r.d instanceof Date ? r.d.toISOString().split('T')[0] : String(r.d).split('T')[0],
@@ -230,14 +265,14 @@ router.get('/dashboard', requireLogin, requireRole('approver', 'superadmin', 'ma
   }
 });
 
-router.get('/stock-history', requireLogin, requireRole('approver', 'managerial', 'superadmin'), async (req, res) => {
+router.get('/stock-history', requireLogin, requireRole('approver', 'ex', 'managerial', 'superadmin'), async (req, res) => {
   try {
     const { pool } = req.app.locals;
     const user = req.session.user;
     const { dateFrom, dateTo, direction } = req.query;
     let { branch } = req.query;
 
-    if (user.role === 'managerial' && user.branch) branch = user.branch;
+    if ((user.role === 'managerial' || user.role === 'approver' || user.role === 'ex') && user.branch) branch = user.branch;
 
     const inParams = [];
     const inConds = [`s.status = 'completed'`];
@@ -279,13 +314,7 @@ router.get('/stock-history', requireLogin, requireRole('approver', 'managerial',
 
         for (const r of itRes.rows) {
           if (!itemMap[r.submission_id]) itemMap[r.submission_id] = {};
-          const group = TYPE_GROUPS.thin.includes(r.scrap_type)
-            ? 'thin'
-            : TYPE_GROUPS.thick.includes(r.scrap_type)
-              ? 'thick'
-              : TYPE_GROUPS.special.includes(r.scrap_type)
-                ? 'special'
-                : null;
+          const group = resolveTypeGroup(r.scrap_type);
           if (group) {
             itemMap[r.submission_id][group] = (itemMap[r.submission_id][group] || 0) + (parseFloat(r.w) || 0);
           }
@@ -294,6 +323,9 @@ router.get('/stock-history', requireLogin, requireRole('approver', 'managerial',
 
       for (const r of subRes.rows) {
         const wbg = itemMap[r.id] || {};
+        const wbgRaw = emptyWeightByGroup();
+        Object.entries(wbg).forEach(([k, v]) => { wbgRaw[k] = v; });
+
         events.push({
           direction: 'in',
           date: r.disposal_submitted_at instanceof Date
@@ -301,11 +333,9 @@ router.get('/stock-history', requireLogin, requireRole('approver', 'managerial',
             : String(r.disposal_submitted_at).split('T')[0],
           branch: r.branch,
           totalWeight: Math.round((parseFloat(r.total_weight) || 0) * 100) / 100,
-          weightByGroup: {
-            thin: Math.round((wbg.thin || 0) * 100) / 100,
-            thick: Math.round((wbg.thick || 0) * 100) / 100,
-            special: Math.round((wbg.special || 0) * 100) / 100,
-          },
+          weightByGroup: Object.fromEntries(
+            Object.entries(wbgRaw).map(([k, v]) => [k, Math.round((v || 0) * 100) / 100])
+          ),
           ref: r.id,
           collectorName: r.collector_name || '',
           approvedBy: r.approved_by || '',
@@ -321,27 +351,17 @@ router.get('/stock-history', requireLogin, requireRole('approver', 'managerial',
         outParams
       );
 
-      const resolveSaleGroup = (scrapType) => {
-        if (scrapType === 'thin' || scrapType === 'thick' || scrapType === 'special') return scrapType;
-        if (TYPE_GROUPS.thin.includes(scrapType)) return 'thin';
-        if (TYPE_GROUPS.thick.includes(scrapType)) return 'thick';
-        if (TYPE_GROUPS.special.includes(scrapType)) return 'special';
-        return 'special';
-      };
-
       for (const r of saleRes.rows) {
-        const grp = resolveSaleGroup(r.scrap_type);
+        const grp = resolveTypeGroup(r.scrap_type) || 'special';
         const w = parseFloat(r.weight_kg) || 0;
+        const outWbg = emptyWeightByGroup();
+        outWbg[grp] = Math.round(w * 100) / 100;
         events.push({
           direction: 'out',
           date: formatDateOnly(r.sale_date),
           branch: r.branch,
           totalWeight: Math.round(w * 100) / 100,
-          weightByGroup: {
-            thin: grp === 'thin' ? Math.round(w * 100) / 100 : 0,
-            thick: grp === 'thick' ? Math.round(w * 100) / 100 : 0,
-            special: grp === 'special' ? Math.round(w * 100) / 100 : 0,
-          },
+          weightByGroup: outWbg,
           ref: r.id,
           scrapType: grp,
           scrapTypeRaw: r.scrap_type,

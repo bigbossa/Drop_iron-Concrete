@@ -25,17 +25,35 @@ const TYPE_GROUPS = {
   thin:    ['thin_1','thin_2','thin_3','thin_4'],
   thick:   ['thick_1','thick_2'],
   special: ['special_1'],
+  concrete_general: ['concrete_plant', 'concrete_factory_product_test', 'concrete_site_defect', 'concrete_wrong_spec', 'concrete_transfer', 'concrete_site', 'concrete_structure'],
+  concrete_quality: ['concrete_cube', 'concrete_sludge', 'concrete_grind'],
 };
 const TYPE_LABELS = {
-  thin_1:    'เศษลวดหัวแบ่ง',
+  concrete_factory_product_test: 'เศษผลิตภัณฑ์คอนกรีตในโรงงานและเศษจากผลิตภัณฑ์ที่ทำการทดสอบ/เทส',
+  concrete_site_defect: 'เศษผลิตภัณฑ์ชำรุดหน้างาน',
+  concrete_wrong_spec: 'เศษผลิตภัณฑ์ที่ผิดแปลสภาพ',
+  concrete_sludge: 'เศษงานสลัดจ์',
+  thin_1:    'เศษลวดหัวแบ่ง(PCY)',
   thin_2:    'สายแพ็คเหล็ก',
   thin_3:    'เศษลวดปลอก',
   thin_4:    'ลวดผูกเหล็กรัดลวดปลอก',
   thick_1:   'เศษเหล็กโดเวล',
   thick_2:   'เหล็กรูปพรรณเศษชิ้นส่วนเครื่องจักร/เศษเหล็กเพลท',
   special_1: 'เศษเหล็กแผ่นจากการตัดเพลทเครื่องตัดพลาสม่า',
+  concrete_plant: 'เศษคอนกรีตจากโรงงานผลิต',
+  concrete_transfer: 'เศษคอนกรีตระหว่างขนส่ง',
+  concrete_site: 'เศษคอนกรีตบริเวณหน้างาน',
+  concrete_structure: 'เศษคอนกรีตจากงานรื้อ/ซ่อมโครงสร้าง',
+  concrete_cube: 'ลูกปูนเทสต์',
+  concrete_grind: 'เศษงานเจียร/สกัดคอนกรีต',
 };
-const GROUP_LABELS = { thin: 'เหล็กบาง', thick: 'เหล็กหนา', special: 'เหล็กหนาพิเศษ' };
+const GROUP_LABELS = {
+  thin: 'เหล็กบาง',
+  thick: 'เหล็กหนา',
+  special: 'เหล็กหนาพิเศษ',
+  concrete_general: 'คอนกรีตทั่วไป',
+  concrete_quality: 'คอนกรีตทดสอบ/งานซ่อม',
+};
 
 function buildTypeBreakdown(items) {
   const bd = {};
@@ -79,7 +97,7 @@ async function initDB() {
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS position   VARCHAR(100);`);
   // Migrate role constraint to include superadmin
   await pool.query(`ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;`);
-  await pool.query(`ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('submitter','approver','superadmin','managerial'));`);
+  await pool.query(`ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('submitter','approver','superadmin','managerial','ex'));`);
 
   // Seed default accounts (only if table is empty)
   const { rows } = await pool.query('SELECT COUNT(*) FROM users');
@@ -150,9 +168,34 @@ async function initDB() {
       total_price   NUMERIC(12,2),
       buyer         VARCHAR(200),
       notes         TEXT,
+      sale_photo    VARCHAR(255),
       recorded_by   VARCHAR(100) NOT NULL,
+      status        VARCHAR(30) NOT NULL DEFAULT 'pending_approval',
+      approved_by   VARCHAR(100),
+      approved_at   TIMESTAMPTZ,
+      rejected_by   VARCHAR(100),
+      rejected_at   TIMESTAMPTZ,
+      rejection_reason TEXT,
+      confirmed_by  VARCHAR(100),
+      confirmed_at  TIMESTAMPTZ,
       created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+  `);
+  await pool.query(`ALTER TABLE scrap_sales ADD COLUMN IF NOT EXISTS sale_photo VARCHAR(255);`);
+  await pool.query(`ALTER TABLE scrap_sales ADD COLUMN IF NOT EXISTS status VARCHAR(30) NOT NULL DEFAULT 'pending_approval';`);
+  await pool.query(`ALTER TABLE scrap_sales ADD COLUMN IF NOT EXISTS approved_by VARCHAR(100);`);
+  await pool.query(`ALTER TABLE scrap_sales ADD COLUMN IF NOT EXISTS approved_at TIMESTAMPTZ;`);
+  await pool.query(`ALTER TABLE scrap_sales ADD COLUMN IF NOT EXISTS rejected_by VARCHAR(100);`);
+  await pool.query(`ALTER TABLE scrap_sales ADD COLUMN IF NOT EXISTS rejected_at TIMESTAMPTZ;`);
+  await pool.query(`ALTER TABLE scrap_sales ADD COLUMN IF NOT EXISTS rejection_reason TEXT;`);
+  await pool.query(`ALTER TABLE scrap_sales ADD COLUMN IF NOT EXISTS confirmed_by VARCHAR(100);`);
+  await pool.query(`ALTER TABLE scrap_sales ADD COLUMN IF NOT EXISTS confirmed_at TIMESTAMPTZ;`);
+  await pool.query(`
+    UPDATE scrap_sales
+    SET status = 'confirmed_by_managerial',
+        confirmed_by = COALESCE(confirmed_by, recorded_by),
+        confirmed_at = COALESCE(confirmed_at, created_at)
+    WHERE status IS NULL OR status = '';
   `);
 
   // Sale activity log table
@@ -239,7 +282,7 @@ app.post('/api/auth/login', async (req, res) => {
       department: user.department || '',
       position:   user.position   || '',
     };
-    const redirectMap = { submitter: '/', approver: '/approve.html', superadmin: '/admin.html', managerial: '/managerial.html' };
+    const redirectMap = { submitter: '/form.html', approver: '/approve.html', ex: '/approve.html', superadmin: '/admin.html', managerial: '/managerial.html' };
     res.json({ success: true, role: user.role, fullName: user.full_name, redirect: redirectMap[user.role] || '/' });
   } catch (err) {
     console.error(err);
@@ -262,6 +305,7 @@ app.get('/api/auth/me', (req, res) => {
 app.get('/', (req, res) => {
   if (!req.session || !req.session.user) return res.redirect('/login.html');
   if (req.session.user.role === 'approver')    return res.redirect('/approve.html');
+  if (req.session.user.role === 'ex')          return res.redirect('/approve.html');
   if (req.session.user.role === 'superadmin')  return res.redirect('/admin.html');
   if (req.session.user.role === 'managerial')  return res.redirect('/managerial.html');
   res.sendFile(path.join(__dirname, 'public', 'form.html'));
@@ -434,7 +478,7 @@ app.post('/api/submit', requireLogin, requireRole('submitter'), upload.any(), as
 });
 
 // Get all submissions
-app.get('/api/submissions', requireLogin, async (req, res) => {
+app.get('/api/submissions', requireLogin, requireRole('submitter', 'approver', 'managerial', 'superadmin'), async (req, res) => {
   try {
     const { status } = req.query;
     const user = req.session.user;
@@ -488,7 +532,7 @@ app.get('/api/submissions', requireLogin, async (req, res) => {
 });
 
 // Get one submission
-app.get('/api/submissions/:id', requireLogin, async (req, res) => {
+app.get('/api/submissions/:id', requireLogin, requireRole('submitter', 'approver', 'managerial', 'superadmin'), async (req, res) => {
   try {
     const user = req.session.user;
     const { rows } = await pool.query('SELECT * FROM submissions WHERE id = $1', [req.params.id]);
@@ -703,18 +747,20 @@ app.get('/api/managerial/report', requireLogin, requireRole('managerial', 'super
 
 // ─── Dashboard API ────────────────────────────────────────────────────────────
 // GET /api/dashboard
-app.get('/api/dashboard', requireLogin, requireRole('approver', 'superadmin', 'managerial'), async (req, res) => {
+app.get('/api/dashboard', requireLogin, requireRole('approver', 'ex', 'superadmin', 'managerial'), async (req, res) => {
   try {
-    const role = req.session.user.role;
+    const user = req.session.user;
+    const role = user.role;
     const isSuperAdmin = role === 'superadmin';
-    // approver and superadmin both see all data
-    const scopeWhere  = '';
-    const scopeParams = [];
+    const scopedBranch = !isSuperAdmin && user.branch ? user.branch : null;
+    const scopedWhere = scopedBranch ? 'WHERE branch = $1' : '';
+    const scopedParams = scopedBranch ? [scopedBranch] : [];
+    const scopedJoinWhere = scopedBranch ? 'WHERE s.branch = $1' : '';
 
     // ── 1. Status counts ──────────────────────────────────────────────────────
     const statusRes = await pool.query(
-      `SELECT status, COUNT(*) AS cnt FROM submissions s GROUP BY status`,
-      []
+      `SELECT status, COUNT(*) AS cnt FROM submissions ${scopedWhere} GROUP BY status`,
+      scopedParams
     );
     const counts = { total: 0, pending: 0, approved: 0, rejected: 0, completed: 0 };
     for (const row of statusRes.rows) {
@@ -726,10 +772,13 @@ app.get('/api/dashboard', requireLogin, requireRole('approver', 'superadmin', 'm
     // ── 2. Total weight & weight by type group ────────────────────────────────
     const weightRes = await pool.query(
       `SELECT si.scrap_type, SUM(si.weight) AS w FROM submission_items si
-         JOIN submissions s ON s.id = si.submission_id GROUP BY si.scrap_type`,
-      []
+         JOIN submissions s ON s.id = si.submission_id
+         ${scopedJoinWhere}
+         GROUP BY si.scrap_type`,
+      scopedParams
     );
-    const weightByGroup = { thin: 0, thick: 0, special: 0 };
+    const weightByGroup = {};
+    Object.keys(TYPE_GROUPS).forEach(group => { weightByGroup[group] = 0; });
     const weightByType = {};
     let totalWeight = 0;
     for (const row of weightRes.rows) {
@@ -747,8 +796,9 @@ app.get('/api/dashboard', requireLogin, requireRole('approver', 'superadmin', 'm
          FROM submission_items si
          JOIN submissions s ON s.id = si.submission_id
          WHERE si.date >= CURRENT_DATE - INTERVAL '13 days'
+         ${scopedBranch ? 'AND s.branch = $1' : ''}
          GROUP BY d ORDER BY d`,
-      []
+      scopedParams
     );
     const weightByDay = dayRes.rows.map(r => ({
       date: r.d instanceof Date ? r.d.toISOString().split('T')[0] : String(r.d).split('T')[0],
@@ -759,8 +809,9 @@ app.get('/api/dashboard', requireLogin, requireRole('approver', 'superadmin', 'm
     const areaRes = await pool.query(
       `SELECT si.scrap_area, SUM(si.weight) AS w FROM submission_items si
          JOIN submissions s ON s.id = si.submission_id
+         ${scopedJoinWhere}
          GROUP BY si.scrap_area ORDER BY w DESC LIMIT 8`,
-      []
+      scopedParams
     );
     const weightByArea = areaRes.rows.map(r => ({
       area: r.scrap_area || '(ไม่ระบุ)',
@@ -773,7 +824,9 @@ app.get('/api/dashboard', requireLogin, requireRole('approver', 'superadmin', 'm
       const branchRes = await pool.query(
         `SELECT s.branch, SUM(si.weight) AS w FROM submission_items si
            JOIN submissions s ON s.id = si.submission_id
-           GROUP BY s.branch ORDER BY w DESC`
+           ${scopedJoinWhere}
+           GROUP BY s.branch ORDER BY w DESC`,
+        scopedParams
       );
       weightByBranch = branchRes.rows.map(r => ({
         branch: r.branch || '(ไม่ระบุ)',
@@ -784,8 +837,9 @@ app.get('/api/dashboard', requireLogin, requireRole('approver', 'superadmin', 'm
     // ── 6. Recent 8 submissions ───────────────────────────────────────────────
     const recentRes = await pool.query(
       `SELECT id, branch, collector_name, status, submitted_at FROM submissions
+         ${scopedWhere}
          ORDER BY submitted_at DESC LIMIT 8`,
-      []
+      scopedParams
     );
 
     // ── 7. User count (superadmin only) ──────────────────────────────────────
@@ -794,18 +848,21 @@ app.get('/api/dashboard', requireLogin, requireRole('approver', 'superadmin', 'm
       const uRes = await pool.query(
         `SELECT role, COUNT(*) AS cnt FROM users WHERE is_active=TRUE GROUP BY role`
       );
-      userStats = { submitter: 0, approver: 0, superadmin: 0 };
+      userStats = { submitter: 0, approver: 0, superadmin: 0, managerial: 0, ex: 0 };
       for (const r of uRes.rows) userStats[r.role] = parseInt(r.cnt, 10);
     }
 
     res.json({
+      scope: {
+        role,
+        branch: scopedBranch,
+        label: scopedBranch ? `สาขา ${scopedBranch}` : 'ภาพรวมทั้งระบบ',
+      },
       counts,
       totalWeight: Math.round(totalWeight * 100) / 100,
-      weightByGroup: {
-        thin:    Math.round(weightByGroup.thin    * 100) / 100,
-        thick:   Math.round(weightByGroup.thick   * 100) / 100,
-        special: Math.round(weightByGroup.special * 100) / 100,
-      },
+      weightByGroup: Object.fromEntries(
+        Object.entries(weightByGroup).map(([key, value]) => [key, Math.round(value * 100) / 100])
+      ),
       weightByType,
       weightByDay,
       weightByArea,
@@ -854,9 +911,16 @@ app.get('/api/users', requireLogin, requireRole('superadmin'), async (req, res) 
 app.post('/api/users', requireLogin, requireRole('superadmin'), async (req, res) => {
   try {
     const { employeeId, password, fullName, role, branch, department, position } = req.body;
+    const normalizedRole = String(role || '').trim().toLowerCase();
+    const resolvedRole = (
+      normalizedRole === 'executive'
+      || normalizedRole.startsWith('executive ')
+      || normalizedRole.includes('อนุมัติขายออก')
+      || normalizedRole === 'ex'
+    ) ? 'ex' : normalizedRole;
     if (!employeeId || !password || !fullName || !role)
       return res.status(400).json({ error: 'กรุณากรอกข้อมูลที่จำเป็นให้ครบ' });
-    if (!['submitter','approver','superadmin','managerial'].includes(role))
+    if (!['submitter','approver','superadmin','managerial','ex'].includes(resolvedRole))
       return res.status(400).json({ error: 'role ไม่ถูกต้อง' });
     if (password.length < 4)
       return res.status(400).json({ error: 'รหัสผ่านต้องมีอย่างน้อย 4 ตัวอักษร' });
@@ -865,7 +929,7 @@ app.post('/api/users', requireLogin, requireRole('superadmin'), async (req, res)
       `INSERT INTO users (employee_id, password_hash, full_name, role, branch, department, position)
          VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
       [employeeId.trim(), hash, fullName.trim(),
-       role, (branch||'').trim()||null, (department||'').trim()||null, (position||'').trim()||null]
+       resolvedRole, (branch||'').trim()||null, (department||'').trim()||null, (position||'').trim()||null]
     );
     res.json({ success: true, id: rows[0].id });
   } catch (err) {
@@ -880,15 +944,24 @@ app.put('/api/users/:id', requireLogin, requireRole('superadmin'), async (req, r
   try {
     const { fullName, role, branch, department, position, password, isActive } = req.body;
     const uid = parseInt(req.params.id, 10);
+    const normalizedRole = role === undefined ? undefined : String(role).trim().toLowerCase();
+    const resolvedRole = normalizedRole === undefined
+      ? undefined
+      : (
+        normalizedRole === 'executive'
+        || normalizedRole.startsWith('executive ')
+        || normalizedRole.includes('อนุมัติขายออก')
+        || normalizedRole === 'ex'
+      ) ? 'ex' : normalizedRole;
     if (isNaN(uid)) return res.status(400).json({ error: 'id ไม่ถูกต้อง' });
-    if (role && !['submitter','approver','superadmin','managerial'].includes(role))
+    if (resolvedRole && !['submitter','approver','superadmin','managerial','ex'].includes(resolvedRole))
       return res.status(400).json({ error: 'role ไม่ถูกต้อง' });
 
     // Build dynamic SET clause
     const fields = [];
     const vals   = [];
     if (fullName  !== undefined) { fields.push(`full_name=$${vals.length+1}`);   vals.push(fullName.trim()); }
-    if (role      !== undefined) { fields.push(`role=$${vals.length+1}`);         vals.push(role); }
+    if (resolvedRole !== undefined) { fields.push(`role=$${vals.length+1}`);         vals.push(resolvedRole); }
     if (branch    !== undefined) { fields.push(`branch=$${vals.length+1}`);       vals.push(branch.trim()||null); }
     if (department!== undefined) { fields.push(`department=$${vals.length+1}`);   vals.push(department.trim()||null); }
     if (position  !== undefined) { fields.push(`position=$${vals.length+1}`);     vals.push(position.trim()||null); }
@@ -1077,15 +1150,15 @@ app.delete('/api/admin/submissions/:id', requireLogin, requireRole('superadmin')
 // ─── Scrap Sales API ──────────────────────────────────────────────────────────
 
 // GET /api/sales
-app.get('/api/sales', requireLogin, requireRole('managerial', 'superadmin'), async (req, res) => {
+app.get('/api/sales', requireLogin, requireRole('managerial', 'superadmin', 'approver', 'ex'), async (req, res) => {
   try {
     const user = req.session.user;
     const { branch, dateFrom, dateTo } = req.query;
     const params = [];
     const conditions = [];
 
-    // managerial locked to own branch
-    if (user.role === 'managerial' && user.branch) {
+    // managerial/approver/ex locked to own branch
+    if ((user.role === 'managerial' || user.role === 'approver' || user.role === 'ex') && user.branch) {
       params.push(user.branch);
       conditions.push(`branch = $${params.length}`);
     } else if (branch) {
@@ -1109,7 +1182,16 @@ app.get('/api/sales', requireLogin, requireRole('managerial', 'superadmin'), asy
       totalPrice:  r.total_price  ? parseFloat(r.total_price)  : null,
       buyer:       r.buyer || '',
       notes:       r.notes || '',
+      salePhoto:   r.sale_photo || '',
       recordedBy:  r.recorded_by,
+      status:      r.status || 'pending_approval',
+      approvedBy:  r.approved_by || '',
+      approvedAt:  r.approved_at,
+      rejectedBy:  r.rejected_by || '',
+      rejectedAt:  r.rejected_at,
+      rejectionReason: r.rejection_reason || '',
+      confirmedBy: r.confirmed_by || '',
+      confirmedAt: r.confirmed_at,
       createdAt:   r.created_at,
     })));
   } catch (err) {
@@ -1119,7 +1201,7 @@ app.get('/api/sales', requireLogin, requireRole('managerial', 'superadmin'), asy
 });
 
 // POST /api/sales
-app.post('/api/sales', requireLogin, requireRole('managerial', 'superadmin'), async (req, res) => {
+app.post('/api/sales', requireLogin, requireRole('managerial', 'superadmin'), upload.single('salePhoto'), async (req, res) => {
   try {
     const user = req.session.user;
     const { saleDate, scrapType, weightKg, pricePerKg, buyer, notes } = req.body;
@@ -1132,18 +1214,20 @@ app.post('/api/sales', requireLogin, requireRole('managerial', 'superadmin'), as
     if (!branch)     return res.status(400).json({ error: 'กรุณาระบุสาขา' });
     if (!saleDate)   return res.status(400).json({ error: 'กรุณาระบุวันที่ขาย' });
     if (!scrapType)  return res.status(400).json({ error: 'กรุณาระบุประเภทเหล็ก' });
+    if (!req.file)   return res.status(400).json({ error: 'กรุณาแนบรูปภาพการขาย' });
     const w = parseFloat(weightKg);
     if (!w || w <= 0) return res.status(400).json({ error: 'น้ำหนักต้องมากกว่า 0' });
 
     const ppk = pricePerKg ? parseFloat(pricePerKg) : null;
     const total = (ppk && w) ? Math.round(ppk * w * 100) / 100 : null;
+    const salePhoto = req.file ? req.file.filename : null;
     const id = uuidv4();
 
     await pool.query(
-      `INSERT INTO scrap_sales (id, branch, sale_date, scrap_type, weight_kg, price_per_kg, total_price, buyer, notes, recorded_by)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+      `INSERT INTO scrap_sales (id, branch, sale_date, scrap_type, weight_kg, price_per_kg, total_price, buyer, notes, sale_photo, recorded_by, status)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'pending_approval')`,
       [id, branch, saleDate, scrapType, w, ppk, total,
-       (buyer||'').trim()||null, (notes||'').trim()||null, user.fullName]
+       (buyer||'').trim()||null, (notes||'').trim()||null, salePhoto, user.fullName]
     );
     // Log the sale action
     await pool.query(
@@ -1184,13 +1268,119 @@ app.delete('/api/sales/:id', requireLogin, requireRole('managerial', 'superadmin
   }
 });
 
+// POST /api/sales/:id/approve
+app.post('/api/sales/:id/approve', requireLogin, requireRole('ex'), async (req, res) => {
+  try {
+    const user = req.session.user;
+    const approvedBy = (req.body?.approvedBy || user.fullName || '').trim();
+    if (!approvedBy) return res.status(400).json({ error: 'กรุณาระบุชื่อผู้อนุมัติ' });
+
+    const result = await pool.query('SELECT * FROM scrap_sales WHERE id=$1', [req.params.id]);
+    if (result.rows.length === 0) return res.status(404).json({ error: 'ไม่พบข้อมูล' });
+
+    const sale = result.rows[0];
+    if (user.branch && sale.branch !== user.branch)
+      return res.status(403).json({ error: 'ไม่มีสิทธิ์อนุมัติรายการขายต่างสาขา' });
+    if ((sale.status || 'pending_approval') !== 'pending_approval')
+      return res.status(400).json({ error: 'อนุมัติได้เฉพาะรายการที่รอ Approver เท่านั้น' });
+
+    await pool.query(
+      `UPDATE scrap_sales
+         SET status='approved_by_approver', approved_by=$1, approved_at=NOW(),
+             rejected_by=NULL, rejected_at=NULL, rejection_reason=NULL
+       WHERE id=$2`,
+      [approvedBy, req.params.id]
+    );
+
+    await pool.query(
+      `INSERT INTO sale_logs (action, branch, sale_date, scrap_type, weight_kg, notes, sale_id, actor)
+         VALUES ('approve', $1, $2, $3, $4, $5, $6, $7)`,
+      [sale.branch, sale.sale_date, sale.scrap_type, parseFloat(sale.weight_kg), sale.notes || null, sale.id, approvedBy]
+    );
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'เกิดข้อผิดพลาดภายในเซิร์ฟเวอร์' });
+  }
+});
+
+// POST /api/sales/:id/reject
+app.post('/api/sales/:id/reject', requireLogin, requireRole('ex'), async (req, res) => {
+  try {
+    const user = req.session.user;
+    const reason = (req.body?.reason || '').trim() || null;
+
+    const result = await pool.query('SELECT * FROM scrap_sales WHERE id=$1', [req.params.id]);
+    if (result.rows.length === 0) return res.status(404).json({ error: 'ไม่พบข้อมูล' });
+
+    const sale = result.rows[0];
+    if (user.branch && sale.branch !== user.branch)
+      return res.status(403).json({ error: 'ไม่มีสิทธิ์ปฏิเสธรายการขายต่างสาขา' });
+    if ((sale.status || 'pending_approval') !== 'pending_approval')
+      return res.status(400).json({ error: 'ปฏิเสธได้เฉพาะรายการที่รอ Approver เท่านั้น' });
+
+    await pool.query(
+      `UPDATE scrap_sales
+         SET status='rejected_by_approver', rejected_by=$1, rejected_at=NOW(), rejection_reason=$2
+       WHERE id=$3`,
+      [user.fullName, reason, req.params.id]
+    );
+
+    await pool.query(
+      `INSERT INTO sale_logs (action, branch, sale_date, scrap_type, weight_kg, notes, cancel_reason, sale_id, actor)
+         VALUES ('reject', $1, $2, $3, $4, $5, $6, $7, $8)`,
+      [sale.branch, sale.sale_date, sale.scrap_type, parseFloat(sale.weight_kg), sale.notes || null, reason, sale.id, user.fullName]
+    );
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'เกิดข้อผิดพลาดภายในเซิร์ฟเวอร์' });
+  }
+});
+
+// POST /api/sales/:id/confirm
+app.post('/api/sales/:id/confirm', requireLogin, requireRole('managerial', 'superadmin'), async (req, res) => {
+  try {
+    const user = req.session.user;
+
+    const result = await pool.query('SELECT * FROM scrap_sales WHERE id=$1', [req.params.id]);
+    if (result.rows.length === 0) return res.status(404).json({ error: 'ไม่พบข้อมูล' });
+
+    const sale = result.rows[0];
+    if (user.role === 'managerial' && user.branch && sale.branch !== user.branch)
+      return res.status(403).json({ error: 'ไม่มีสิทธิ์ยืนยันรายการขายต่างสาขา' });
+    if (sale.status !== 'approved_by_approver')
+      return res.status(400).json({ error: 'ต้องผ่านการอนุมัติจาก Approver ก่อนจึงจะยืนยันได้' });
+
+    await pool.query(
+      `UPDATE scrap_sales
+         SET status='confirmed_by_managerial', confirmed_by=$1, confirmed_at=NOW()
+       WHERE id=$2`,
+      [user.fullName, req.params.id]
+    );
+
+    await pool.query(
+      `INSERT INTO sale_logs (action, branch, sale_date, scrap_type, weight_kg, notes, sale_id, actor)
+         VALUES ('confirm', $1, $2, $3, $4, $5, $6, $7)`,
+      [sale.branch, sale.sale_date, sale.scrap_type, parseFloat(sale.weight_kg), sale.notes || null, sale.id, user.fullName]
+    );
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'เกิดข้อผิดพลาดภายในเซิร์ฟเวอร์' });
+  }
+});
+
 // GET /api/sale-logs
-app.get('/api/sale-logs', requireLogin, requireRole('managerial', 'superadmin', 'approver'), async (req, res) => {
+app.get('/api/sale-logs', requireLogin, requireRole('managerial', 'superadmin', 'approver', 'ex'), async (req, res) => {
   try {
     const user = req.session.user;
     const { dateFrom, dateTo } = req.query;
     let { branch } = req.query;
-    if (user.role === 'managerial' && user.branch) branch = user.branch;
+    if ((user.role === 'managerial' || user.role === 'approver' || user.role === 'ex') && user.branch) branch = user.branch;
 
     const params = [];
     const conds  = [];
@@ -1222,14 +1412,14 @@ app.get('/api/sale-logs', requireLogin, requireRole('managerial', 'superadmin', 
 });
 
 // GET /api/stock-history  — combined IN (completed submissions) + OUT (sales) timeline
-app.get('/api/stock-history', requireLogin, requireRole('approver', 'managerial', 'superadmin'), async (req, res) => {
+app.get('/api/stock-history', requireLogin, requireRole('approver', 'ex', 'managerial', 'superadmin'), async (req, res) => {
   try {
     const user = req.session.user;
     const { dateFrom, dateTo, direction } = req.query;
     let { branch } = req.query;
 
-    // managerial locked to own branch
-    if (user.role === 'managerial' && user.branch) branch = user.branch;
+    // managerial/approver/ex locked to own branch
+    if ((user.role === 'managerial' || user.role === 'approver' || user.role === 'ex') && user.branch) branch = user.branch;
 
     const inParams = [];
     const inConds  = [`s.status = 'completed'`];
@@ -1243,6 +1433,7 @@ app.get('/api/stock-history', requireLogin, requireRole('approver', 'managerial'
     if (branch)   { outParams.push(branch);   outConds.push(`branch = $${outParams.length}`); }
     if (dateFrom) { outParams.push(dateFrom); outConds.push(`sale_date >= $${outParams.length}::date`); }
     if (dateTo)   { outParams.push(dateTo);   outConds.push(`sale_date <= $${outParams.length}::date`); }
+    outConds.push(`status = 'confirmed_by_managerial'`);
     const outWhere = outConds.length ? 'WHERE ' + outConds.join(' AND ') : '';
 
     const events = [];
@@ -1268,14 +1459,19 @@ app.get('/api/stock-history', requireLogin, requireRole('approver', 'managerial'
         );
         for (const r of itRes.rows) {
           if (!itemMap[r.submission_id]) itemMap[r.submission_id] = {};
-          const grp = TYPE_GROUPS.thin.includes(r.scrap_type) ? 'thin'
-                    : TYPE_GROUPS.thick.includes(r.scrap_type) ? 'thick'
-                    : TYPE_GROUPS.special.includes(r.scrap_type) ? 'special' : null;
+          let grp = null;
+          for (const [group, types] of Object.entries(TYPE_GROUPS)) {
+            if (types.includes(r.scrap_type)) { grp = group; break; }
+          }
           if (grp) itemMap[r.submission_id][grp] = (itemMap[r.submission_id][grp] || 0) + (parseFloat(r.w) || 0);
         }
       }
       for (const r of subRes.rows) {
         const wbg = itemMap[r.id] || {};
+        const wbgOut = {};
+        Object.keys(TYPE_GROUPS).forEach((group) => {
+          wbgOut[group] = Math.round((wbg[group] || 0) * 100) / 100;
+        });
         events.push({
           direction:     'in',
           date:          r.disposal_submitted_at instanceof Date
@@ -1283,11 +1479,7 @@ app.get('/api/stock-history', requireLogin, requireRole('approver', 'managerial'
                            : String(r.disposal_submitted_at).split('T')[0],
           branch:        r.branch,
           totalWeight:   Math.round((parseFloat(r.total_weight) || 0) * 100) / 100,
-          weightByGroup: {
-            thin:    Math.round((wbg.thin    || 0) * 100) / 100,
-            thick:   Math.round((wbg.thick   || 0) * 100) / 100,
-            special: Math.round((wbg.special || 0) * 100) / 100,
-          },
+          weightByGroup: wbgOut,
           ref:           r.id,
           collectorName: r.collector_name || '',
           approvedBy:    r.approved_by    || '',
@@ -1302,25 +1494,25 @@ app.get('/api/stock-history', requireLogin, requireRole('approver', 'managerial'
         `SELECT * FROM scrap_sales ${outWhere} ORDER BY sale_date DESC, created_at DESC LIMIT 200`, outParams
       );
       const resolveSaleGroup = (scrapType) => {
-        if (scrapType === 'thin' || scrapType === 'thick' || scrapType === 'special') return scrapType;
-        if (TYPE_GROUPS.thin.includes(scrapType)) return 'thin';
-        if (TYPE_GROUPS.thick.includes(scrapType)) return 'thick';
-        if (TYPE_GROUPS.special.includes(scrapType)) return 'special';
-        return 'special';
+        if (TYPE_GROUPS[scrapType]) return scrapType;
+        for (const [group, types] of Object.entries(TYPE_GROUPS)) {
+          if (types.includes(scrapType)) return group;
+        }
+        return Object.keys(TYPE_GROUPS)[0] || 'thin';
       };
       for (const r of saleRes.rows) {
         const grp = resolveSaleGroup(r.scrap_type);
         const w   = parseFloat(r.weight_kg) || 0;
+        const outWeightByGroup = {};
+        Object.keys(TYPE_GROUPS).forEach((group) => {
+          outWeightByGroup[group] = group === grp ? Math.round(w * 100) / 100 : 0;
+        });
         events.push({
           direction:     'out',
           date:          formatDateOnly(r.sale_date),
           branch:        r.branch,
           totalWeight:   Math.round(w * 100) / 100,
-          weightByGroup: {
-            thin:    grp === 'thin'    ? Math.round(w * 100) / 100 : 0,
-            thick:   grp === 'thick'   ? Math.round(w * 100) / 100 : 0,
-            special: grp === 'special' ? Math.round(w * 100) / 100 : 0,
-          },
+          weightByGroup: outWeightByGroup,
           ref:        r.id,
           scrapType:  grp,
           scrapTypeRaw: r.scrap_type,

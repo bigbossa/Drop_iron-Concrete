@@ -9,6 +9,7 @@
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link href="/nav-unified.css" rel="stylesheet">
+  <link href="/executive-theme.css" rel="stylesheet">
   <style>
     body {
       background: #eef2f7;
@@ -414,15 +415,32 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
   <script src="/nav-unified.js"></script>
   <script>
-    const DISPOSAL_OPTIONS = {
-      'Y5': ['จุดทิ้งลานบริเวณข้างห้องน้ำฝ่ายผลิต'],
-      'Y8': ['จุดทิ้งลานทิ้งเศษลวดรอขาย หลังปั๊มน้ำมัน'],
-      'Y11': ['จุดทิ้งที่ 1 ท้ายโรงงาน C', 'จุดทิ้งที่ 2 ข้างโรงงาน A'],
+    const DISPOSAL_OPTIONS_BY_MATERIAL = {
+      steel: {
+        'Y5': ['จุดทิ้งลานบริเวณข้างห้องน้ำฝ่ายผลิต'],
+        'Y8': ['จุดทิ้งลานทิ้งเศษลวดรอขาย หลังปั๊มน้ำมัน'],
+        'Y11': ['จุดทิ้งที่ 1 ท้ายโรงงาน C', 'จุดทิ้งที่ 2 ข้างโรงงาน A'],
+      },
+      concrete: {
+        'Y5': ['ลานทิ้งเศษคอนกรีต'],
+        'Y8': ['ลานทิ้งเศษคอนกรีต Y'],
+        'Y11': ['ลานทิ้งเศษคอนกรีต ฝั่งบ่อน้ำ', 'ลานทิ้งเศษคอนกรีต ฝั่งโรงงาน F'],
+      },
     };
 
-    function buildDisposalSelect() {
+    function getSubmissionMaterial(submission) {
+      const types = (submission?.items || []).map(it => String(it.scrapType || '').trim());
+      if (types.length === 0) return 'steel';
+      const hasConcrete = types.some(t => t.startsWith('concrete_'));
+      const hasSteel = types.some(t => t && !t.startsWith('concrete_'));
+      if (hasConcrete && !hasSteel) return 'concrete';
+      return 'steel';
+    }
+
+    function buildDisposalSelect(submission) {
       const branch = (window._userBranch || '').toUpperCase();
-      const opts = DISPOSAL_OPTIONS[branch];
+      const material = getSubmissionMaterial(submission);
+      const opts = (DISPOSAL_OPTIONS_BY_MATERIAL[material] || {})[branch];
       if (!opts) {
         return `<input type="text" class="form-control" id="disposalLocation"
       placeholder="ระบุสถานที่ทิ้ง เช่น โกดัง A ห้อง B" maxlength="200">`;
@@ -440,10 +458,35 @@
       thick_1: 'เศษเหล็กโดเวล',
       thick_2: 'เหล็กรูปพรรณเศษชิ้นส่วนเครื่องจักร/เศษเหล็กเพลท',
       special_1: 'เศษเหล็กแผ่นจากการตัดเพลทเครื่องตัดพลาสม่า',
+      concrete_plant: 'เศษคอนกรีตจากโรงงานผลิต',
+      concrete_factory_product_test: 'เศษผลิตภัณฑ์ที่รีเจค ในโรงงาน และเศษจากผลิตภัณฑ์ที่ทำการทดสอบ เทส',
+      concrete_site_defect: 'เศษผลิตภัณฑ์ที่รีเจค หน้างาน',
+      concrete_wrong_spec: 'เศษผลิตภัณฑ์ที่ผิดแปรสภาพ',
+      concrete_cube: 'ลูกปูน แพล้น',
+      concrete_grind: 'เศษงานเจียรมิกซ์',
+      thin: 'เหล็กบาง',
+      thick: 'เหล็กหนา',
+      special: 'เหล็กหนาพิเศษ',
+      concrete_general: 'คอนกรีตทั่วไป',
+      concrete_quality: 'คอนกรีตทดสอบ/งานซ่อม',
     };
     const STATUS_TH = { pending: 'รออนุมัติ', approved: 'อนุมัติแล้ว — รอบันทึกสถานที่ทิ้ง', rejected: 'ปฏิเสธ', completed: 'เสร็จสิ้น (ล็อกแล้ว)' };
     const STATUS_SHORT = { pending: 'รออนุมัติ', approved: 'อนุมัติแล้ว', rejected: 'ปฏิเสธ', completed: 'เสร็จสิ้น' };
     const STATUS_CLASS = { pending: 'status-pending', approved: 'status-approved', rejected: 'status-rejected', completed: 'status-completed' };
+    const GROUP_COLORS = {
+      thin: '#084298',
+      thick: '#7c4d00',
+      special: '#880e4f',
+      concrete_general: '#3730a3',
+      concrete_quality: '#166534',
+    };
+    const GROUP_BG = {
+      thin: '#e7f3ff',
+      thick: '#fff3e0',
+      special: '#fce4ec',
+      concrete_general: '#eef2ff',
+      concrete_quality: '#f0fdf4',
+    };
 
     let allSubmissions = [];
 
@@ -484,12 +527,18 @@
         const totalW = (s.items || []).reduce((a, b) => a + (b.weight || 0), 0);
         const dt = new Date(s.submittedAt).toLocaleString('th-TH', { day: 'numeric', month: 'short', year: '2-digit', hour: '2-digit', minute: '2-digit' });
         const needAction = s.status === 'approved' ? '<span class="badge bg-warning text-dark small">รอบันทึก</span>' : '';
+        const bd = s.typeBreakdown || {};
+        const typeBadges = Object.entries(bd)
+          .filter(([, g]) => g && g.totalWeight > 0)
+          .map(([key, g]) => `<span class="badge me-1" style="background:${GROUP_BG[key] || '#f1f3f5'};color:${GROUP_COLORS[key] || '#374151'};border:1px solid ${(GROUP_COLORS[key] || '#374151')}40">${esc(g.label)} ${g.totalWeight.toFixed(1)} กก.</span>`)
+          .join('');
         return `
       <div class="sub-item" onclick="loadById('${s.id}')">
         <div class="d-flex justify-content-between align-items-start gap-2">
           <div style="min-width:0;flex:1">
             <span class="sub-id">${s.id.substring(0, 8).toUpperCase()}…</span>
             <div class="fw-semibold" style="font-size:.9rem;line-height:1.25">${esc(s.collectorName)} <span class="text-muted fw-normal">— สาขา ${esc(s.branch || '–')}</span></div>
+            <div class="mt-1">${typeBadges || '<span class="text-muted small">–</span>'}</div>
             <div class="sub-meta-row mt-1">
               <span><i class="far fa-clock me-1"></i>${dt}</span>
               <span class="sub-weight">${totalW.toFixed(1)} กก.</span>
@@ -633,7 +682,7 @@
         <div class="card-body">
           <div class="mb-3">
             <label class="form-label fw-semibold">สถานที่ทิ้งรอขาย <span class="text-danger">*</span></label>
-            ${buildDisposalSelect()}
+            ${buildDisposalSelect(s)}
           </div>
           <div class="mb-3">
             <label class="form-label fw-semibold">

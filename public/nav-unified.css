@@ -128,6 +128,91 @@
   border-radius: 6px;
 }
 
+.exec-side-rail {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 220px;
+  z-index: 1035;
+  background: linear-gradient(180deg, #232a35 0%, #2c3441 58%, #37271e 100%);
+  color: #eef2f7;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 12px 0 28px rgba(15, 23, 42, 0.22);
+  display: flex;
+  flex-direction: column;
+}
+
+.exec-side-rail-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 1rem 1rem 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.exec-side-rail-brand i {
+  color: #fb923c;
+}
+
+.exec-side-rail-nav {
+  padding: 0.75rem;
+  display: grid;
+  gap: 0.35rem;
+  overflow-y: auto;
+}
+
+.exec-rail-link {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  text-decoration: none;
+  color: #e5e7eb;
+  padding: 0.55rem 0.65rem;
+  border-radius: 9px;
+  border: 1px solid transparent;
+  font-size: 0.83rem;
+}
+
+.exec-rail-link:hover {
+  color: #fff;
+  border-color: rgba(251, 146, 60, 0.35);
+  background: rgba(251, 146, 60, 0.14);
+}
+
+.exec-rail-link.active,
+.exec-rail-link.primary {
+  color: #111827;
+  background: linear-gradient(135deg, #fb923c, #f97316);
+  border-color: #fb923c;
+  font-weight: 700;
+}
+
+.exec-side-rail-footer {
+  margin-top: auto;
+  padding: 0.85rem 0.9rem;
+  font-size: 0.72rem;
+  color: #d1d5db;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+body.has-exec-side-rail {
+  padding-left: 220px;
+}
+
+@media (min-width: 992px) {
+  .app-nav-actions.side-rail-enabled a.app-nav-btn,
+  .app-nav-actions.side-rail-enabled .app-nav-more-btn,
+  .app-nav-actions.side-rail-enabled .app-user-chip {
+    display: none !important;
+  }
+}
+
 @media (max-width: 575px) {
   .app-topbar-inner {
     min-height: 52px;
@@ -150,5 +235,15 @@
 
   .app-nav-btn .btn-label {
     display: none;
+  }
+}
+
+@media (max-width: 991px) {
+  .exec-side-rail {
+    display: none;
+  }
+
+  body.has-exec-side-rail {
+    padding-left: 0;
   }
 }

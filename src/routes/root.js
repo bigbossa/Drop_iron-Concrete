@@ -9,6 +9,7 @@ router.get('/', (req, res) => {
   }
 
   if (req.session.user.role === 'approver') return res.redirect('/approve.html');
+  if (req.session.user.role === 'ex') return res.redirect('/approve.html');
   if (req.session.user.role === 'superadmin') return res.redirect('/admin.html');
   if (req.session.user.role === 'managerial') return res.redirect('/managerial.html');
 
